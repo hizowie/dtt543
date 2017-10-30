@@ -28,7 +28,7 @@ using namespace std;
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG true
+#define DEBUG false
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
@@ -397,7 +397,7 @@ void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCou
         }
         else
         {
-            //packet is in window but not next, store and ACK last
+            //packet is in window but not next, save for later
             window[index] = lastSYN;
             sock.ackTo((char*) &lastSeq, sizeof(int));
         }

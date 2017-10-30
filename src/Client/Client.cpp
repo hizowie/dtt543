@@ -29,7 +29,7 @@ using namespace std;
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG true
+#define DEBUG false
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
