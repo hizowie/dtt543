@@ -67,70 +67,59 @@ static const char * error_requiredOptions_Sliding = "When testID '2' (Sliding Wi
 
 int getTestID(const char* input)
 {
-	int userSelection = atoi(input);
-	if(userSelection < 1 || userSelection > 2)
-	{
-	    cout << "userSelection < 1 || userSelection > 2" <<endl;
-		cout << "userSelection = " << userSelection << endl;
+    int userSelection = atoi(input);
+    if(userSelection < 1 || userSelection > 2)
+    {
+        cout << error_invalidInput << error_testID << endl;
+        cout << instructions << endl;
+        return -1;
+    }
 
-	    cout << error_invalidInput << error_testID << endl;
-		cout << instructions << endl;
-		return -1;
-	}
-
-	return userSelection;
+    return userSelection;
 };
 
 int getTimeoutLength(const char* input)
 {
-	int userSelection = atoi(input);
-	if(userSelection < 1 || userSelection > 3)
-	{
-	    cout << "userSelection < 1 || userSelection > 3" <<endl;
-		cout << error_invalidInput << error_timeoutLength << endl;
-		cout << instructions << endl;
-		return -1;
-	}
+    int userSelection = atoi(input);
+    if(userSelection < 1 || userSelection > 3)
+    {
+        cout << "userSelection < 1 || userSelection > 3" <<endl;
+        cout << error_invalidInput << error_timeoutLength << endl;
+        cout << instructions << endl;
+        return -1;
+    }
 
-	switch(userSelection)
-	{
-	case 1: return 200;
-	case 2: return 1000;
-	case 3:
-	default: return 200000;
-	}
+    switch(userSelection)
+    {
+    case 1: return 200;
+    case 2: return 1000;
+    case 3:
+    default: return 200000;
+    }
 };
 
 int getWindowSize(const char* input)
 {
-	int userSelection = atoi(input);
-	if(userSelection < 1 || userSelection > 3)
-	{
-		cout << error_invalidInput << error_windowSize << endl;
-		cout << instructions << endl;
-		return -1;
-	}
+    int userSelection = atoi(input);
+    if(userSelection < 1 || userSelection > 3)
+    {
+        cout << error_invalidInput << error_windowSize << endl;
+        cout << instructions << endl;
+        return -1;
+    }
 
-	return pow(10, (userSelection + 1));
+    return pow(10, (userSelection + 1));
 };
 
 
 
-int sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength );
-int sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength );
+void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
 
 
 
 int main(int argc, char* argv[])
 {
-
-	for(int i = 0; i < argc; i++)
-	{
-		cout << "[" << i << "] : " << argv[i] << endl;
-	}
-
-	cout << endl << endl;
-
     //input:
         //[0]: int port; required
         //[1]: string //set the destination addressmachineNamargce; required
@@ -142,8 +131,6 @@ int main(int argc, char* argv[])
     //input sanitation
     if(argc < 2)
     {
-    	cout <<"if argc < 2" << endl;
-
         cout << error_invalidInput << error_notEnoughArguments << endl;
         cout << instructions << endl;
         return 0;
@@ -152,16 +139,12 @@ int main(int argc, char* argv[])
     //check port number
     if (atoi(argv[1]) < 0 || atoi(argv[1]) > 65535)
     {
-    	cout << "atoi(argv[0]) < 0 || atoi(argv[0]) > 65535" <<endl;
-
         cout << error_invalidInput << error_portNumber;
         return 0;
     }
 
     //create an udpsocket with the given port
     UdpSocket sock(atoi(argv[1]));
-
-
 
 
     //set the destination address
@@ -179,44 +162,47 @@ int main(int argc, char* argv[])
     int transmission[MAX_UDP_PAYLOAD/sizeof(int)];
 
 
-
-
-
+    //test if given commandline arguments
     if(argc > 2)
     {
+        //get test ID
         testID = getTestID(argv[3]);
-
         if(testID == -1)
             return 0;
 
-
+        //test stop-and-wait testID
         if(testID == 1)
         {
+            //stop-and-wait requires at least 4 arguments
             if(argc < 4)
             {
                 cout << error_invalidInput << error_requiredOptions_Stop << endl;
                 return 0;
             }
 
+            //get timeoutLength
             timeoutLength = getTimeoutLength(argv[4]);
             if(timeoutLength == -1)
                 return 0;
         }
 
 
+        //test sliding-window testID
         if(testID == 2)
         {
+            //sliding-window requires at least 5 arguments
             if(argc < 5)
             {
                 cout << error_invalidInput << error_requiredOptions_Sliding << endl;
                 return 0;
             }
 
-
+            //get timeoutLength
             timeoutLength = getTimeoutLength(argv[4]);
             if(timeoutLength == -1)
                 return 0;
 
+            //get windowSize
             windowSize = getWindowSize(argv[5]);
             if(windowSize == -1)
                 return 0;
@@ -233,111 +219,127 @@ int main(int argc, char* argv[])
     //start the timer
     stopwatch.start();
 
+    //delegate testing
     switch(testID)
     {
     case 2:
         sendSlidingWindow(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
-        cout << stopwatch.lap() << endl;
+        cout << "Total Time: " << stopwatch.lap() << endl;
         break;
     case 1:
     default:
         sendStopAndWait(sock, transmission, TOTAL_PACKETS, timeoutLength);
-        cout << stopwatch.lap() << endl;
+        cout << "Total Time: " << stopwatch.lap() << endl;
         break;
     }
 }
 
 
 
-int sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength)
+void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength)
 {
-    Timer internalClock;
-    int ackFails = 0;
-    int lastFails = ackFails;
+    //create local variables
+    Timer stopwatch;
+    bool ackTimedOut = false;
 
+    //start sending data
     for(int i = 0; i < sendCount; i++)
     {
-        internalClock.start();
         transmission[0] = i;
         sock.sendTo((char*)transmission, sizeof(&transmission));
-
+        
+        stopwatch.start();
+        
+        //poll for ACKs
         while(sock.pollRecvFrom() <= 0)
         {
             usleep(1);
-            if(internalClock.lap() >= timeoutLength)
+            
+            //check if ack timed out
+            if(stopwatch.lap() >= timeoutLength)
             {
+                //notify of failure and flag it
                 cout << error_ACKTimeout << msg_ACKResend << (i+1) << endl;
-                ackFails++;
+                ackTimedOut = true;
                 break;
             }
         }
 
-        //check if timed out
-        if(lastFails != ackFails)
+        //check flag for failure
+        if(ackTimedOut)
         {
-            //timed out, resend packet
+            //step back one to resend
             i--;
-            lastFails = ackFails;
+            
+            //reset flag
+            ackTimedOut = false;
             continue;
         }
 
+        //poll succeeded, receive ack
         sock.recvFrom((char*)transmission, sizeof(&transmission));
-        cout << msg_packetSYN << (i + 1) << msg_packetACKTime << internalClock.lap() << endl;
+        cout << msg_packetSYN << (i + 1) << msg_packetACKTime << stopwatch.lap() << endl;
     }
-
-    return ackFails;
 }
 
 
-int sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
+void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
 {
-    Timer internalClock;
+    Timer stopwatch;
     int index = 0;
 
-    int ackFails = 0;
-    int lastFails = ackFails;
-    int missingAcks = 0;
-    int receivedAcks = 0;
+    int pendingACKs = 0;
+    bool ackTimedOut = false;
 
     while(index < sendCount)
     {
-    	while(missingAcks < windowSize)
-    	{
-    		transmission[0] = index;
-    		sock.sendTo((char*)transmission, sizeof(&transmission));
-    		cout << msg_packetSent << (index + 1) << endl;
-    		index++;
-    		missingAcks++;
-    	}
+        //bulk-send packets
+        while(pendingACKs < windowSize)
+        {
+            transmission[0] = index;
+            sock.sendTo((char*)transmission, sizeof(&transmission));
+            cout << msg_packetSent << (index + 1) << endl;
+            index++;
+            pendingACKs++;
+        }
 
-    	if(sock.pollRecvFrom() > 0)
-    	{
-    		sock.recvFrom((char*)transmission, sizeof(&transmission));
-			missingAcks--;
-			continue;
-    	}
+        //bulk-receive ACKs
+        if(sock.pollRecvFrom() > 0)
+        {
+            sock.recvFrom((char*)transmission, sizeof(&transmission));
+            ackTimedOut = false;
+            pendingACKs--;
+            continue;
+        }
 
-    	internalClock.start();
-    	while(sock.pollRecvFrom() <= 0)
-    	{
-    		usleep(1);
-    		if(internalClock.lap() >= timeoutLength)
-    		{
-    			cout << error_ACKTimeout << msg_ACKResend << (index + 1) << endl;
-    			ackFails++;
-    			break;
-    		}
-    	}
+        stopwatch.start();
+        
+        //poll for ACKs
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+            
+            //check if timed out
+            if(stopwatch.lap() >= timeoutLength)
+            {
+                //notify of failure and flag it
+                cout << error_ACKTimeout << msg_ACKResend << (index + 1) << endl;
+                ackTimedOut = true;
+                break;
+            }
+        }
 
-    	if(lastFails != ackFails)
-    	{
-    		index--;
-    		lastFails = ackFails;
-    		continue;
-    	}
+        //check flag for failure
+        if(ackTimedOut)
+        {
+            //step back one to resend
+            index--;
+            
+            //reset flag
+            ackTimedOut = false;
+            continue;
+        }
     }
-
-    return ackFails;
 }
 
 
