@@ -415,7 +415,7 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
     //create local variables
     int lastFrameRecd = 0;
     int lastFrameAccpt = 0;
-    int seqNumToAck = -1;
+    //int seqNumToAck = -1;
 
     int lastSeq = -1;
 
@@ -451,7 +451,12 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
 
        if(index >= lastFrameRecd && index <= lastFrameAccpt)
        {
-           lastFrameRecd = seqNumToAck;
+           if(index == lastFrameRecd +1)
+           {
+               lastFrameRecd = index;
+           }
+
+           //lastFrameRecd = seqNumToAck;
            lastFrameAccpt = lastFrameRecd + windowSize;
 
            //sock.ackTo((char*) &lastFrameRecd, sizeof(int));
