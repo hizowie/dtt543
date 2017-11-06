@@ -515,7 +515,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
             ackTimedOut = false;
             cout << "\t\t\tack timed out." << endl;
 
-            lastFrameSent = lastFrameAckd;
+            //lastFrameSent = lastFrameAckd;
             /*
             int counter = pendingAcks;
 
