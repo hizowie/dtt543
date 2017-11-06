@@ -443,6 +443,8 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
         int index = *transmission;
         cout << "Packet received :" << transmission[0] << endl;
 
+        sock.ackTo((char*) &index, sizeof(int));
+        /*
        if(index < lastFrameRecd || index > lastFrameAccpt)
        {
            continue;
