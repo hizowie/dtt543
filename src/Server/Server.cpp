@@ -443,13 +443,13 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
         int index = *transmission;
         cout << "Packet received :" << transmission[0] << endl;
 
-       if(index <= lastFrameRecd || index > lastFrameAccpt)
+       if(index < lastFrameRecd || index > lastFrameAccpt)
        {
            continue;
        }
 
 
-       if(index > lastFrameRecd && index <= lastFrameAccpt)
+       if(index >= lastFrameRecd && index <= lastFrameAccpt)
        {
            lastFrameRecd = seqNumToAck;
            lastFrameAccpt = lastFrameRecd + windowSize;
