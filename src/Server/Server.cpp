@@ -444,6 +444,24 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
         cout << "Packet received :" << transmission[0] << endl;
 
         sock.ackTo((char*) &index, sizeof(int));
+
+        if(index == lastFrameRecd+1)
+        {
+            lastFrameRecd = index;
+        }
+        else
+        {
+            window[index % windowSize] = index;
+
+            while(window[lastFrameRecd %windowSize] > -1)
+            {
+                window[lastFrameRecd %windowSize] = -1;
+                lastFrameRecd++;
+                sock.ackTo((char*) &lastFrameRecd, sizeof(int));
+                lastFrameAccpt = lastFrameRecd + windowSize;
+            }
+        }
+
         /*
        if(index < lastFrameRecd || index > lastFrameAccpt)
        {

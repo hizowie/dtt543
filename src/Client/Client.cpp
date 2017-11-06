@@ -430,7 +430,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
             if(window[lastFrameSent % windowSize] > -1)
             {
                 lastFrameSent++;
-                seqNum++;
+                seqNum = lastFrameSent;
                 continue;
             }
             else
