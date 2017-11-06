@@ -443,7 +443,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
 
         }
 
-
+        cout << "\tend window send" <<endl;
 
         //bulk-receive ACKs
         if(sock.pollRecvFrom() > 0)
@@ -509,7 +509,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
             cout << "\t\t\tack timed out." << endl;
 
 
-            //lastFrameSent = lastFrameAckd;
+            lastFrameSent = lastFrameAckd;
 
 
             /*
