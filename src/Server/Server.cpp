@@ -41,7 +41,8 @@ static const char* instructions = "This Client accepts the following input:\n"
 							//"\n\tmachineName - the name of the receiving computer (required)"
 							"\n\ttestID - the test to execute (optional)"
 							"\n\t\t1 - Stop-and-Wait"
-							"\n\t\t2 - Sliding Window"
+                            "\n\t\t2 - Sliding Window: Go-Back-N"
+                            "\n\t\t3 - Sliding Window: Selective Repeat"
 							"\n\ttimeoutLength - the amount of time before the window times out (optional)"
 							"\n\t\t1 - small  (200 nanseconds)"
 							"\n\t\t2 - medium (1 microsecond)"
@@ -65,11 +66,11 @@ static const char * error_requiredOptions_Sliding = "When testID '2' (Sliding Wi
 int getTestID(const char* input)
 {
     int userSelection = atoi(input);
-    if(userSelection < 1 || userSelection > 2)
+    if(userSelection < 1 || userSelection > 3)
     {
         if(DEBUG)
         {
-            cout << "userSelection < 1 || userSelection > 2" << endl;
+            cout << "userSelection < 1 || userSelection > 3" << endl;
             cout << "userSeletion = "<< userSelection << endl;
         }
 
@@ -129,7 +130,8 @@ int getWindowSize(const char* input)
 
 
 void receiveStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength);
-void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+void receiveGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
 
 
 int main(int argc, char* argv[])
@@ -259,7 +261,10 @@ int main(int argc, char* argv[])
     switch(testID)
     {
     case 2:
-        receiveSlidingWindow(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
+        receiveGoBackN(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
+        break;
+    case 3:
+        receiveSelectiveRepeat(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
         break;
     case 1:
     default:
@@ -321,12 +326,11 @@ void receiveStopAndWait(UdpSocket &sock, int transmission[], const int sendCount
 }
 
 
-
-void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
+void receiveGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
 {
     //create local variables
-    int lastSYN = 0;
-    int lastACK = 0;
+    int lastFrameRec = 0;
+    int lastAckFrame = 0;
     int lastSeq = -1;
 
     vector<int> window(windowSize);
@@ -337,8 +341,8 @@ void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCou
         window[i] = -1;
     }
 
-    
-    while(lastSYN < sendCount)
+
+    while(lastFrameRec < sendCount)
     {
         //wait for incoming data
         while(sock.pollRecvFrom() <=0)
@@ -346,17 +350,17 @@ void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCou
             usleep(1);
         }
 
-        //receive latest packet 
+        //receive latest packet
         sock.recvFrom((char*) transmission, MAX_UDP_PAYLOAD);
-        lastSYN = *transmission;
+        lastFrameRec = *transmission;
         cout << "Packet received :" << transmission[0] << endl;
 
-        
+
         //get position within the window
-        int index = lastSYN % windowSize;
+        int seqNum = lastFrameRec % windowSize;
 
         //check index is before last ACK or outside window
-        if(index < lastACK || index >= windowSize)
+        if(seqNum < lastAckFrame || seqNum >= windowSize)
         {
             //previous ack failed, go-back-n
             sock.ackTo((char*) &lastSeq, sizeof(int));
@@ -364,31 +368,31 @@ void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCou
         }
 
         //check if index is next packet
-        if(index == lastACK)
+        if(seqNum == lastAckFrame)
         {
             //accept packet list
-            window[index] = lastSYN;
-            
+            window[seqNum] = lastFrameRec;
+
             //update the sequence number
-            lastSeq = lastSYN;
-            
+            lastSeq = lastFrameRec;
+
             //iterate over the list, looking for the next non-negative-one value
-            while(window[lastACK] > -1)
+            while(window[lastAckFrame] > -1)
             {
                 //update the sequence index
-                lastSeq = window[lastACK];
-                
+                lastSeq = window[lastAckFrame];
+
                 //flag window as un-ACK'ed
-                window[lastACK] = -1;
-                
+                window[lastAckFrame] = -1;
+
                 //move ack index
-                lastACK++;
-                
+                lastAckFrame++;
+
                 //get ack index within window
-                lastACK = lastACK % windowSize;
-                
+                lastAckFrame = lastAckFrame % windowSize;
+
                 //check if window has been ack'ed
-                if(window[lastACK] == -1)
+                if(window[lastAckFrame] == -1)
                 {
                     //window hasn't been ack'ed, notify sender
                     sock.ackTo((char*) &lastSeq, sizeof(int));
@@ -398,9 +402,119 @@ void receiveSlidingWindow(UdpSocket &sock, int transmission[], const int sendCou
         else
         {
             //packet is in window but not next, save for later
-            window[index] = lastSYN;
+            window[seqNum] = lastFrameRec;
             sock.ackTo((char*) &lastSeq, sizeof(int));
         }
+    }
+
+}
+
+
+void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength,  int windowSize)
+{
+    //create local variables
+    int lastFrameRecd = 0;
+    int lastFrameAccpt = 0;
+    int seqNumToAck = -1;
+
+    int lastSeq = -1;
+
+    windowSize = windowSize /100;
+
+    vector<int> window(windowSize);
+
+    //init window
+    for(int i = 0; i < windowSize; i++)
+    {
+        window[i] = -1;
+    }
+
+
+    while(lastFrameRecd < sendCount)
+    {
+        //wait for incoming data
+        while(sock.pollRecvFrom() <=0)
+        {
+            usleep(1);
+        }
+
+        //receive latest packet
+        sock.recvFrom((char*) transmission, MAX_UDP_PAYLOAD);
+        int index = *transmission;
+        cout << "Packet received :" << transmission[0] << endl;
+
+       if(index <= lastFrameRecd || index > lastFrameAccpt)
+       {
+           continue;
+       }
+
+
+       if(index > lastFrameRecd && index <= lastFrameAccpt)
+       {
+           lastFrameRecd = seqNumToAck;
+           lastFrameAccpt = lastFrameRecd + windowSize;
+
+           //sock.ackTo((char*) &lastFrameRecd, sizeof(int));
+           sock.ackTo((char*) &index, sizeof(int));
+       }
+
+       if(lastFrameRecd + 1  == sendCount)
+       {
+           break;
+       }
+        /*
+        //get position within the window
+        int seqNum = lastFrameRec % windowSize;
+
+
+        //check index is before last ACK or outside window
+        if(seqNum < lastAckFrame || seqNum >= windowSize)
+        {
+            //previous ack failed, go-back-n
+            sock.ackTo((char*) &lastSeq, sizeof(int));
+            continue;
+        }
+
+        //check if index is next packet
+        if(seqNum == lastAckFrame)
+        {
+            //accept packet list
+            window[seqNum] = lastFrameRec;
+
+            //update the sequence number
+            lastSeq = lastFrameRec;
+
+            //iterate over the list, looking for the next non-negative-one value
+            while(window[lastAckFrame] > -1)
+            {
+                //update the sequence index
+                lastSeq = window[lastAckFrame];
+
+                //flag window as un-ACK'ed
+                window[lastAckFrame] = -1;
+
+                //move ack index
+                lastAckFrame++;
+
+                //get ack index within window
+                lastAckFrame = lastAckFrame % windowSize;
+
+                //check if window has been ack'ed
+                if(window[lastAckFrame] == -1)
+                {
+                    //window hasn't been ack'ed, notify sender
+                    sock.ackTo((char*) &lastSeq, sizeof(int));
+                }
+            }
+        }
+        else
+        {
+            //packet is in window but not next, save for later
+            window[seqNum] = lastFrameRec;
+            sock.ackTo((char*) &lastSeq, sizeof(int));
+        }
+
+        */
     }
 }
 

@@ -25,11 +25,12 @@ using namespace std;
 #include <fcntl.h>
 #include <string.h>
 #include <limits.h>
+#include <vector>
 
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG false
+#define DEBUG true
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
@@ -44,7 +45,8 @@ static const char* instructions = "This Client accepts the following input:\n"
 							"\n\tmachineName - the name of the receiving computer (required)"
 							"\n\ttestID - the test to execute (optional)"
 							"\n\t\t1 - Stop-and-Wait"
-							"\n\t\t2 - Sliding Window"
+                            "\n\t\t2 - Sliding Window: Go-Back-N"
+                            "\n\t\t2 - Sliding Window: Selective Repeat"
 							"\n\ttimeoutLength - the amount of time before the window times out (optional)"
 							"\n\t\t1 - small  (200 nanseconds)"
 							"\n\t\t2 - medium (1 microsecond)"
@@ -72,11 +74,11 @@ static const char * error_requiredOptions_Sliding = "When testID '2' (Sliding Wi
 int getTestID(const char* input)
 {
     int userSelection = atoi(input);
-    if(userSelection < 1 || userSelection > 2)
+    if(userSelection < 1 || userSelection > 3)
     {
         if(DEBUG)
         {
-            cout << "userSelection < 1 || userSelection > 2" << endl;
+            cout << "userSelection < 1 || userSelection > 3" << endl;
             cout << "userSeletion = "<< userSelection << endl;
         }
 
@@ -136,7 +138,8 @@ int getWindowSize(const char* input)
 
 
 void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength );
-void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+void sendGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
 
 
 
@@ -273,7 +276,11 @@ int main(int argc, char* argv[])
     switch(testID)
     {
     case 2:
-        sendSlidingWindow(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
+        sendGoBackN(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
+        cout << "Total Time: " << stopwatch.lap() << endl;
+        break;
+    case 3:
+        sendSelectiveRepeat(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
         cout << "Total Time: " << stopwatch.lap() << endl;
         break;
     case 1:
@@ -333,23 +340,23 @@ void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, c
 }
 
 
-void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
+void sendGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
 {
     Timer stopwatch;
-    int index = 0;
+    int seqNum = 0;
 
     int pendingACKs = 0;
     bool ackTimedOut = false;
 
-    while(index < sendCount)
+    while(seqNum < sendCount)
     {
         //bulk-send packets
         while(pendingACKs < windowSize)
         {
-            transmission[0] = index;
+            transmission[0] = seqNum;
             sock.sendTo((char*)transmission, sizeof(&transmission));
-            cout << msg_packetSent << (index + 1) << endl;
-            index++;
+            cout << msg_packetSent << (seqNum + 1) << endl;
+            seqNum++;
             pendingACKs++;
         }
 
@@ -373,7 +380,7 @@ void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount,
             if(stopwatch.lap() >= timeoutLength)
             {
                 //notify of failure and flag it
-                cout << error_ACKTimeout << msg_ACKResend << (index + 1) << endl;
+                cout << error_ACKTimeout << msg_ACKResend << (seqNum + 1) << endl;
                 ackTimedOut = true;
                 break;
             }
@@ -383,7 +390,7 @@ void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount,
         if(ackTimedOut)
         {
             //step back one to resend
-            index--;
+            seqNum--;
             
             //reset flag
             ackTimedOut = false;
@@ -392,5 +399,220 @@ void sendSlidingWindow(UdpSocket &sock, int transmission[], const int sendCount,
     }
 }
 
+
+void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength,  int windowSize)
+{
+    Timer stopwatch;
+    bool ackTimedOut = false;
+
+
+    int lastFrameAckd = 0;
+    int lastFrameSent = 0;
+    int seqNum = 0;
+
+    windowSize = windowSize /100;
+
+    //init window
+    vector<int> window(windowSize);
+    for(int i = 0; i < windowSize; i++)
+    {
+        window[i] = -1;
+    }
+
+    while(seqNum < sendCount)
+    {
+
+        //bulk-send packets
+        while(lastFrameSent - lastFrameAckd <= windowSize)
+        {
+
+            if(window[lastFrameSent % windowSize] > -1)
+            {
+                lastFrameSent++;
+                continue;
+            }
+
+
+            transmission[0] = lastFrameSent;
+            sock.sendTo((char*)transmission, sizeof(&transmission));
+            cout << msg_packetSent << (seqNum + 1) << endl;
+            lastFrameSent++;
+            seqNum = lastFrameSent;
+
+            usleep(1000);
+
+        }
+
+
+
+        //bulk-receive ACKs
+        if(sock.pollRecvFrom() > 0)
+        {
+            sock.recvFrom((char*)transmission, sizeof(&transmission));
+
+
+
+            int index = *transmission % windowSize;
+
+            cout << "\t\tPackage rec'd: " << *transmission << endl;
+
+            if(index == lastFrameAckd)
+            {
+
+                //accept the ack
+                window[lastFrameAckd] = index;
+
+                //move the marker
+                lastFrameAckd++;
+                cout << "\t\t\tNext package Acked: " << *transmission << endl;
+                while(window[lastFrameAckd] > -1)
+                {
+
+                    //lastFrameSent = window[lastFrameAckd];
+                    window[lastFrameAckd] = -1;
+
+                    lastFrameAckd++;
+
+                    lastFrameAckd = lastFrameAckd % windowSize;
+                }
+            }
+            else
+            {
+                cout << "\t\t\t\tOther package acked: " << *transmission << endl;
+                window[index] = *transmission;
+            }
+
+            continue;
+        }
+
+        stopwatch.start();
+
+        //poll for ACKs
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+
+            //check if timed out
+            if(stopwatch.lap() >= timeoutLength)
+            {
+                //notify of failure and flag it
+                cout << error_ACKTimeout << msg_ACKResend << (seqNum + 1) << endl;
+                ackTimedOut = true;
+                break;
+            }
+        }
+
+        if(ackTimedOut)
+        {
+            //reset flag
+            ackTimedOut = false;
+            cout << "\t\t\tack timed out." << endl;
+
+
+            //lastFrameSent = lastFrameAckd;
+
+
+            /*
+            //check the space in the windows frames
+            for(int i = lastFrameAckd; i < seqNum; i++)
+            {
+                if(window[i] != -1)
+                {
+                    seqNum = i;
+                    cout << endl << "Setting Sequence Number to " << i << endl << endl;
+                    //sleep(1);
+                    break;
+                }
+            }
+            */
+        }
+
+        if(lastFrameAckd+1 == sendCount)
+        {
+            break;
+        }
+/*
+        //check flag for failure
+        if(ackTimedOut)
+        {
+            //reset flag
+            ackTimedOut = false;
+
+            //check the space in the windows frames
+            for(int i = lastFrameAckd; i < seqNum; i++)
+            {
+                if(window[i] != -1)
+                {
+                    seqNum = i;
+                    cout << endl << "Setting Sequence Number to " << i << endl << endl;
+                    sleep(1);
+                    break;
+                }
+            }
+        }
+
+        if(seqNum + 1 == sendCount)
+        {
+            break;
+        }
+        */
+
+        /*
+
+        //get position within the window
+        int seqNum = lastFrameRec % windowSize;
+
+
+
+        //check index is before last ACK or outside window
+        if(seqNum < lastAckFrame || seqNum >= windowSize)
+        {
+            //previous ack failed, go-back-n
+            sock.ackTo((char*) &lastSeq, sizeof(int));
+            continue;
+        }
+
+        //check if index is next packet
+        if(seqNum == lastAckFrame)
+        {
+            //accept packet list
+            window[seqNum] = lastFrameRec;
+
+            //update the sequence number
+            lastSeq = lastFrameRec;
+
+            //iterate over the list, looking for the next non-negative-one value
+            while(window[lastAckFrame] > -1)
+            {
+                //update the sequence index
+                lastSeq = window[lastAckFrame];
+
+                //flag window as un-ACK'ed
+                window[lastAckFrame] = -1;
+
+                //move ack index
+                lastAckFrame++;
+
+                //get ack index within window
+                lastAckFrame = lastAckFrame % windowSize;
+
+                //check if window has been ack'ed
+                if(window[lastAckFrame] == -1)
+                {
+                    //window hasn't been ack'ed, notify sender
+                    sock.ackTo((char*) &lastSeq, sizeof(int));
+                }
+            }
+        }
+        else
+        {
+            //packet is in window but not next, save for later
+            window[seqNum] = lastFrameRec;
+            sock.ackTo((char*) &lastSeq, sizeof(int));
+        }
+        */
+
+    }
+}
 
 
