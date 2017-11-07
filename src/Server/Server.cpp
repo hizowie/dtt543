@@ -28,7 +28,7 @@ using namespace std;
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG false
+#define DEBUG true
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
@@ -124,6 +124,8 @@ int getWindowSize(const char* input)
         return -1;
     }
 
+    cout << "userSelection = " << userSelection  << endl;
+    cout << "pow(10, (userSelection + 1))  = " << pow(10, (userSelection + 1)) << endl;
     return pow(10, (userSelection + 1));
 };
 
@@ -220,7 +222,7 @@ int main(int argc, char* argv[])
         }
 
         //test sliding-window testID
-        if(testID == 2)
+        if(testID == 2 || testID == 3)
         {
             //sliding-window requires at least 4 arguments 
             if(argc < 4)
@@ -410,8 +412,12 @@ void receiveGoBackN(UdpSocket &sock, int transmission[], const int sendCount, co
 }
 
 
-void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength,  int windowSize)
+void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
 {
+    cout << "sendCount : " << sendCount << endl;
+    cout << "timeoutLength : " << timeoutLength << endl;
+    cout << "windowSize : " << windowSize << endl;
+
     //create local variables
     int lastFrameRecd = 0;
     int lastFrameAccpt = 0;
@@ -419,7 +425,7 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
 
     int lastSeq = -1;
 
-    windowSize = windowSize /100;
+    //windowSize = windowSize /100;
 
     vector<int> window(windowSize);
 
@@ -430,7 +436,7 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
     }
 
 
-    while(lastFrameRecd < sendCount)
+    while(lastFrameRecd <= sendCount)
     {
         //wait for incoming data
         while(sock.pollRecvFrom() <=0)
@@ -454,9 +460,10 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
         else
         {
             cout << "step 2" <<endl;
-            window[index % windowSize] = index;
 
-            while(window[lastFrameRecd %windowSize] > -1)
+            window[(index % windowSize)] = ((int)index);
+
+            while(window[lastFrameRecd % windowSize] > -1)
             {
                 cout << "step 3" <<endl;
                 window[lastFrameRecd %windowSize] = -1;
