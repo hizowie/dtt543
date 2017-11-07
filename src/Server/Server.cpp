@@ -423,6 +423,7 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
     int lastFrameRecd = 0;
     int lastFrameAccpt = 0;
     //int seqNumToAck = -1;
+    Timer stopwatch;
 
     int lastSeq = -1;
 
@@ -439,11 +440,19 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
 
     while(lastFrameRecd <= sendCount)
     {
+        stopwatch.start();
         //wait for incoming data
-        while(sock.pollRecvFrom() <=0)
+        while(sock.pollRecvFrom() <=0 || stopwatch.lap() < timeoutLength)
         {
             usleep(1);
         }
+
+        if(stopwatch.lap() >= timeoutLength)
+        {
+            sock.ackTo((char*) &lastFrameRecd, sizeof(int));
+            continue;
+        }
+
 
         //receive latest packet
         sock.recvFrom((char*) transmission, MAX_UDP_PAYLOAD);
