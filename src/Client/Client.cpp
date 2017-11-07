@@ -404,7 +404,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
 {
     cout << "sendCount : " << sendCount << endl;
     cout << "timeoutLength : " << timeoutLength << endl;
-    cout << "windowSize : " << windowSize << endl;
+    cout << "windowSize : " << windowSize << endl<< endl;
 
 
     Timer stopwatch;
