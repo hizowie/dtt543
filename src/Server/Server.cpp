@@ -442,17 +442,16 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
     {
         stopwatch.start();
         //wait for incoming data
-        while(sock.pollRecvFrom() <=0 || stopwatch.lap() < timeoutLength)
+        while(sock.pollRecvFrom() <=0)
         {
             usleep(1);
-        }
 
-        if(stopwatch.lap() >= timeoutLength)
-        {
-            sock.ackTo((char*) &lastFrameRecd, sizeof(int));
-            continue;
+            if(stopwatch.lap() >= timeoutLength)
+            {
+                sock.ackTo((char*) &lastFrameRecd, sizeof(int));
+                stopwatch.start();
+            }
         }
-
 
         //receive latest packet
         sock.recvFrom((char*) transmission, MAX_UDP_PAYLOAD);
