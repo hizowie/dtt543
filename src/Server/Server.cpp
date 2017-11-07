@@ -438,7 +438,7 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
     }
 
 
-    while(lastFrameRecd <= sendCount)
+    while(lastFrameRecd < sendCount)
     {
         stopwatch.start();
         //wait for incoming data
@@ -470,18 +470,16 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
         {
             cout << "step 2" <<endl;
 
-            window[(index % windowSize)] = ((int)index);
+            window[index % windowSize] = index;
 
             while(window[lastFrameRecd % windowSize] > -1)
             {
-                cout << "step 3" <<endl;
                 window[lastFrameRecd %windowSize] = -1;
                 lastFrameRecd++;
                 sock.ackTo((char*) &lastFrameRecd, sizeof(int));
                 cout << "\tSkip-Acked " << lastFrameRecd << endl;
                 lastFrameAccpt = lastFrameRecd + windowSize;
             }
-            cout << "step 4" <<endl;
         }
 
         /*

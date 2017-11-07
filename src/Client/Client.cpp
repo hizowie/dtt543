@@ -411,10 +411,10 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
     bool ackTimedOut = false;
 
 
-    int lastFrameAckd = 0;
     int lastFrameSent = 0;
+    int lastFrameAckd = 0;
     int seqNum = 0;
-    //int pendingAcks = 0;
+    int pendingAcks = 0;
 
     //windowSize = windowSize /100;
 
@@ -425,43 +425,28 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
         window[i] = -1;
     }
 
-    while(seqNum < sendCount)
+    //while(seqNum < sendCount)
+    while(seqNum < sendCount && lastFrameAckd < sendCount)
     {
 
         //bulk-send packets
-        while(lastFrameSent - lastFrameAckd < windowSize)
+        //while(lastFrameSent - lastFrameAckd < windowSize )
+        while(pendingAcks < windowSize)
         {
-
-
-            if(window[lastFrameSent % windowSize] > -1)
-            {
-                lastFrameSent++;
-                seqNum = lastFrameSent;
-                continue;
-            }
-            else
-            {
-                cout << "\tnot skipping " << lastFrameSent << endl;
-            }
-
-
             transmission[0] = lastFrameSent;
             sock.sendTo((char*)transmission, sizeof(&transmission));
             cout << msg_packetSent << (seqNum + 1) << endl;
             lastFrameSent++;
             seqNum = lastFrameSent;
-            //pendingAcks++;
-
-            //usleep(100);
+            pendingAcks++;
 
             cout  << "seqNum = " << seqNum << endl;
-
         }
 
-        //cout << "\tend window send" <<endl;
+
 
         //bulk-receive ACKs
-        if(sock.pollRecvFrom() > 0)// && pendingAcks > 0 )
+        if(sock.pollRecvFrom() > 0)
         {
             sock.recvFrom((char*)transmission, sizeof(&transmission));
 
@@ -470,14 +455,20 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
 
             cout << "\t\tPackage rec'd: " << *transmission << endl;
 
-            if(index == lastFrameAckd)
+            if(*transmission < lastFrameAckd)
+            {
+                lastFrameSent = *transmission;
+                continue;
+            }
+            if(*transmission == lastFrameAckd)
             {
 
                 //accept the ack
-                window[lastFrameAckd] = index;
+                window[index] = *transmission;
 
                 //move the marker
-                lastFrameAckd++;
+                pendingAcks--;
+
                 cout << "\t\t\tNext package Acked: " << *transmission << endl;
                 while(window[index] > -1)
                 {
@@ -490,6 +481,7 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
             {
                 cout << "\t\t\t\tOther package acked: " << *transmission << endl;
                 window[index] = *transmission;
+                pendingAcks--;
             }
 
             continue;
@@ -519,17 +511,11 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
         {
             //reset flag
             ackTimedOut = false;
-            cout << "\t\t\tack timed out." << endl;
+            cout << "\t\t\tack timed out, resending " << lastFrameAckd << endl;
 
-            for(int i = lastFrameAckd; i < lastFrameSent; i++)
-            {
-                if(window[lastFrameSent % windowSize] == -1)
-                {
-                    transmission[0] = i;
-                    sock.sendTo((char*)transmission, sizeof(&transmission));
-                    cout << msg_packetSent << (i + 1) << endl;
-                }
-            }
+            transmission[0] = lastFrameAckd;
+            sock.sendTo((char*)transmission, sizeof(&transmission));
+            cout << msg_packetSent << (lastFrameAckd + 1) << endl;
         }
     }
 }
