@@ -28,7 +28,7 @@ using namespace std;
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG true
+#define DEBUG false
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
@@ -134,6 +134,9 @@ int getWindowSize(const char* input)
 void receiveStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength);
 void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
 void receiveGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
+
+
+
 
 
 int main(int argc, char* argv[])
@@ -427,7 +430,6 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
 
     int lastSeq = -1;
 
-    //windowSize = windowSize /100;
 
     vector<int> window(windowSize);
 
@@ -482,84 +484,6 @@ void receiveSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendC
             }
         }
 
-        /*
-       if(index < lastFrameRecd || index > lastFrameAccpt)
-       {
-           continue;
-       }
-
-
-       if(index >= lastFrameRecd && index <= lastFrameAccpt)
-       {
-           if(index == lastFrameRecd +1)
-           {
-               lastFrameRecd = index;
-           }
-
-           //lastFrameRecd = seqNumToAck;
-           lastFrameAccpt = lastFrameRecd + windowSize;
-
-           //sock.ackTo((char*) &lastFrameRecd, sizeof(int));
-           sock.ackTo((char*) &index, sizeof(int));
-       }
-
-       if(lastFrameRecd + 1  == sendCount)
-       {
-           break;
-       }
-        /*
-        //get position within the window
-        int seqNum = lastFrameRec % windowSize;
-
-
-        //check index is before last ACK or outside window
-        if(seqNum < lastAckFrame || seqNum >= windowSize)
-        {
-            //previous ack failed, go-back-n
-            sock.ackTo((char*) &lastSeq, sizeof(int));
-            continue;
-        }
-
-        //check if index is next packet
-        if(seqNum == lastAckFrame)
-        {
-            //accept packet list
-            window[seqNum] = lastFrameRec;
-
-            //update the sequence number
-            lastSeq = lastFrameRec;
-
-            //iterate over the list, looking for the next non-negative-one value
-            while(window[lastAckFrame] > -1)
-            {
-                //update the sequence index
-                lastSeq = window[lastAckFrame];
-
-                //flag window as un-ACK'ed
-                window[lastAckFrame] = -1;
-
-                //move ack index
-                lastAckFrame++;
-
-                //get ack index within window
-                lastAckFrame = lastAckFrame % windowSize;
-
-                //check if window has been ack'ed
-                if(window[lastAckFrame] == -1)
-                {
-                    //window hasn't been ack'ed, notify sender
-                    sock.ackTo((char*) &lastSeq, sizeof(int));
-                }
-            }
-        }
-        else
-        {
-            //packet is in window but not next, save for later
-            window[seqNum] = lastFrameRec;
-            sock.ackTo((char*) &lastSeq, sizeof(int));
-        }
-
-        */
     }
 }
 

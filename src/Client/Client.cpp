@@ -30,7 +30,7 @@ using namespace std;
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
-#define DEBUG true
+#define DEBUG false
 
 
 static const char* error_ACKTimeout = "Packet ACK Timeout.";
@@ -58,7 +58,7 @@ static const char* instructions = "This Client accepts the following input:\n"
 
 
 static const char * error_invalidInput = "Invalid Input: ";
-static const char * error_notEnoughArguments = "Not enough arguments. ";
+static const char * error_notEnoughArguments = ;
 static const char * error_portNumber = "Port number must be between 0 and 65535";
 static const char * error_machineName = "Could not establish connection, check machineName.";
 static const char * error_testID = "Invalid testID selected.";
@@ -90,7 +90,7 @@ int getTestID(const char* input)
     return userSelection;
 };
 
-int getTimeoutLength(const char* input)
+int getTimeoutLength(const char int testID, const char* input)
 {
     int userSelection = atoi(input);
     if(userSelection < 1 || userSelection > 3)
@@ -116,7 +116,7 @@ int getTimeoutLength(const char* input)
     }
 };
 
-int getWindowSize(const char* input)
+int getWindowSize(const char int testId, const char* input)
 {
     int userSelection = atoi(input);
     if(userSelection < 1 || userSelection > 3)
@@ -142,25 +142,49 @@ void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCoun
 void sendGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
 
 
+int getPort(const char* input);
 
-int main(int argc, char* argv[])
+int getPort(const char* input)
 {
-    if(DEBUG)
+    int output = atoi(atoi(input));
+        
+    //check port number
+    if (output < 0 || output > 65535)
     {
-        for(int i = 0; i < argc; i++)
-           cout << "argv[" << i << "]: "<< argv[i]<< endl;
+        if(DEBUG)
+        {
+            cout << "atoi(input) < 0 || atoi(input) > 65535; atoi(input) = " << output << endl << endl;
+        }
 
-        cout << endl << endl;
+        cout << error_invalidInput << error_portNumber;
+        return output;
     }
-
-    //input:
-        //[0]: int port; required
-        //[1]: string //set the destination addressmachineNamargce; required
-        //[2]: int testID; optional
-        //[3]: int timeoutLength; optional
-        //[4]: int windowSize; optional
+    
+    return -1
+}
 
 
+int getAddress(const char* input);
+
+int getAddress(const char* input)
+{
+    
+}
+
+
+void printDebug
+{
+    for(int i = 0; i < argc; i++)
+    {
+        cout << "argv[" << i << "]:\t"<< argv[i]<< endl;
+    }
+    
+    cout << endl << endl;
+}
+
+
+bool checkArguments(int argc, char* argv[])
+{
     //input sanitation
     if(argc < 2)
     {
@@ -169,70 +193,22 @@ int main(int argc, char* argv[])
             cout << "argc < 2; argc = " << argc << endl << endl;
         }
 
-        cout << error_invalidInput << error_notEnoughArguments << endl;
+        cout << error_invalidInput << "Not enough arguments. " << endl;
         cout << instructions << endl;
-        return 0;
+        return false;
     }
 
-    //check port number
-    if (atoi(argv[1]) < 0 || atoi(argv[1]) > 65535)
-    {
-        if(DEBUG)
-        {
-            cout << "atoi(argv[1]) < 0 || atoi(argv[1]) > 65535; atoi(argv[1]) = " << atoi(argv[1]) << endl << endl;
-        }
-
-        cout << error_invalidInput << error_portNumber;
-        return 0;
-    }
-
-    //create an udpsocket with the given port
-    UdpSocket sock(atoi(argv[1]));
-
-
-    //set the destination address
-    if(!sock.setDestAddress(argv[2]))
-    {
-        cout << "!sock.setDestAddress(argv[1])" <<endl;
-        cout << error_invalidInput << error_machineName << endl;
-        return 0;
-    }
-
-
-    //local variable creation
-    int testID, timeoutLength, windowSize;
-    Timer stopwatch;
-    int transmission[MAX_UDP_PAYLOAD/sizeof(int)];
-
-
+    
     //test if given commandline arguments
     if(argc > 2)
     {
         //get test ID
         testID = getTestID(argv[3]);
         if(testID == -1)
-            return 0;
+            return false;
 
         //test stop-and-wait testID
-        if(testID == 1)
-        {
-            //stop-and-wait requires at least 4 arguments
-            if(argc < 4)
-            {
-                if(DEBUG)
-                {
-                    cout << "argc < 4; argc = " << argc << endl << endl;
-                }
-
-                cout << error_invalidInput << error_requiredOptions_Stop << endl;
-                return 0;
-            }
-
-            //get timeoutLength
-            timeoutLength = getTimeoutLength(argv[4]);
-            if(timeoutLength == -1)
-                return 0;
-        }
+        
 
 
         //test sliding-window testID
@@ -247,18 +223,18 @@ int main(int argc, char* argv[])
                 }
 
                 cout << error_invalidInput << error_requiredOptions_Sliding << endl;
-                return 0;
+                return false;
             }
 
             //get timeoutLength
             timeoutLength = getTimeoutLength(argv[4]);
             if(timeoutLength == -1)
-                return 0;
+                return false;
 
             //get windowSize
             windowSize = getWindowSize(argv[5]);
             if(windowSize == -1)
-                return 0;
+                return false;
         }
     }
     else
@@ -267,257 +243,144 @@ int main(int argc, char* argv[])
         testID = 1;
         timeoutLength = getTimeoutLength("1");
     }
-
-
-    //start the timer
-    stopwatch.start();
-
-    //delegate testing
-    switch(testID)
-    {
-    case 2:
-        sendGoBackN(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
-        cout << "Total Time: " << stopwatch.lap() << endl;
-        break;
-    case 3:
-        sendSelectiveRepeat(sock, transmission, TOTAL_PACKETS, timeoutLength, windowSize);
-        cout << "Total Time: " << stopwatch.lap() << endl;
-        break;
-    case 1:
-    default:
-        sendStopAndWait(sock, transmission, TOTAL_PACKETS, timeoutLength);
-        cout << "Total Time: " << stopwatch.lap() << endl;
-        break;
-    }
+    
+    return true;
 }
 
-
-
-void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength)
+typedef struct 
 {
-    //create local variables
-    Timer stopwatch;
-    bool ackTimedOut = false;
+    u_char SeqNum; 
+    u_char AckNum;
+    u_char Flags;
+} infoheader;
 
-    //start sending data
-    for(int i = 0; i < sendCount; i++)
+typedef struct 
+{
+    struct sendQ
     {
-        transmission[0] = i;
-        sock.sendTo((char*)transmission, sizeof(&transmission));
-        
+        Event timeout; 
+        Msg msg;
+    }sendQ[SMS];
+    
+    struct recQ
+    {
+        int received;
+        Msg msg;
+    }reqS[RWS];
+    
+    u_char lastAckRecd;
+    u_char lastFrameSent;
+    u_char nextFrameExpected;
+    Semaphone sendWindowNotFull;
+    infoheader header;
+    
+} infopacket;
+
+int main(int argc, char* argv[])
+{
+    //input:
+        //[0]: int port; required
+        //[1]: string //set the destination addressmachineNamargce; required
+        //[2]: int testID; optional
+        //[3]: int timeoutLength; optional
+        //[4]: int windowSize; optional
+
+    if(DEBUG)
+        printDebug();
+    
+
+    if(!checkArguments(argc, &argv))
+        return 0;
+    
+
+    //check port number
+    int port = getPort(argv[1]);
+    if(port == -1) 
+        return 0;
+  
+    
+    //create an udpsocket with the given port
+    UdpSocket sock(port);
+
+
+    //set the destination address
+    if(!sock.setDestAddress(argv[2]))
+    {
+        cout << "!sock.setDestAddress(argv[1])" <<endl;
+        cout << error_invalidInput << error_machineName << endl;
+        return 0;
+    }
+
+    
+    //handshake();
+    sock.recvFrom((char*) transmission, sizeof(&transmission));
+        if(transmission[0] == i)
+        {
+            cout << msg_ACKSend << (i+1) << endl;
+            sock.ackTo((char*) transmission, sizeof(&transmission));
+            ackTimedOut = false;
+            continue;
+        }
+
         stopwatch.start();
-        
+
         //poll for ACKs
         while(sock.pollRecvFrom() <= 0)
         {
+        }
+}
+
+void sendHandshake(const int timeoutLength, )
+{
+    bool ackTimedOut = false;
+    
+    infopacket p;
+    u_char seqNum = 0x0;
+    
+    p.header.SeqNum = seqNum; 
+    p.header.Flags = seqNum;
+
+    int attemptCount = 10;
+    
+    
+    while(attemptCount > 0)
+    {
+        sock.sendTo((infopacket*)p, sizeof(&p1));
+        
+        Timer stopwatch; 
+        stopwatch.start();
+        while(sock.pollRecvFrom() <= 0 && )
+        {
             usleep(1);
-            
-            //check if ack timed out
             if(stopwatch.lap() >= timeoutLength)
             {
                 //notify of failure and flag it
                 cout << error_ACKTimeout << msg_ACKResend << (i+1) << endl;
                 ackTimedOut = true;
-                break;
+                break; 
             }
         }
-
-        //check flag for failure
-        if(ackTimedOut)
-        {
-            //step back one to resend
-            i--;
-            
-            //reset flag
-            ackTimedOut = false;
-            continue;
-        }
-
-        //poll succeeded, receive ack
-        sock.recvFrom((char*)transmission, sizeof(&transmission));
-        cout << msg_packetSYN << (i + 1) << msg_packetACKTime << stopwatch.lap() << endl;
-    }
-}
-
-
-void sendGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
-{
-    Timer stopwatch;
-    int seqNum = 0;
-
-    int pendingACKs = 0;
-    bool ackTimedOut = false;
-
-    while(seqNum < sendCount)
-    {
-        //bulk-send packets
-        while(pendingACKs < windowSize)
-        {
-            transmission[0] = seqNum;
-            sock.sendTo((char*)transmission, sizeof(&transmission));
-            cout << msg_packetSent << (seqNum + 1) << endl;
-            seqNum++;
-            pendingACKs++;
-        }
-
-        //bulk-receive ACKs
-        if(sock.pollRecvFrom() > 0)
-        {
-            sock.recvFrom((char*)transmission, sizeof(&transmission));
-            ackTimedOut = false;
-            pendingACKs--;
-            continue;
-        }
-
-        stopwatch.start();
         
-        //poll for ACKs
-        while(sock.pollRecvFrom() <= 0)
-        {
-            usleep(1);
-            
-            //check if timed out
-            if(stopwatch.lap() >= timeoutLength)
-            {
-                //notify of failure and flag it
-                cout << error_ACKTimeout << msg_ACKResend << (seqNum + 1) << endl;
-                ackTimedOut = true;
-                break;
-            }
-        }
-
-        //check flag for failure
         if(ackTimedOut)
         {
-            //step back one to resend
-            seqNum--;
-            
-            //reset flag
+            attemptCount--;
             ackTimedOut = false;
             continue;
         }
+        
+        sock.recvFrom((infopacket*)p, sizeof(&p));
+        if(p.header.SeqNum == seqNum + 1 && p.header.Flags == seqNum + 2)
+        {
+            seq++;
+            p.header.SeqNum = seq;
+            p.header.Flags = seq;
+        }
     }
+    
 }
 
 
-void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize)
-{
-    cout << "sendCount : " << sendCount << endl;
-    cout << "timeoutLength : " << timeoutLength << endl;
-    cout << "windowSize : " << windowSize << endl<< endl;
 
 
-    Timer stopwatch;
-    bool ackTimedOut = false;
-
-
-    int lastFrameSent = 0;
-    int lastFrameAckd = 0;
-    int seqNum = 0;
-    int pendingAcks = 0;
-
-    //windowSize = windowSize /100;
-
-    //init window
-    vector<int> window(windowSize);
-    for(int i = 0; i < windowSize; i++)
-    {
-        window[i] = -1;
-    }
-
-    //while(seqNum < sendCount)
-    while(seqNum < sendCount && lastFrameAckd < sendCount)
-    {
-
-        //bulk-send packets
-        //while(lastFrameSent - lastFrameAckd < windowSize )
-        while(pendingAcks < windowSize)
-        {
-            transmission[0] = lastFrameSent;
-            sock.sendTo((char*)transmission, sizeof(&transmission));
-            cout << msg_packetSent << (seqNum + 1) << endl;
-            lastFrameSent++;
-            seqNum = lastFrameSent;
-            pendingAcks++;
-
-            cout  << "seqNum = " << seqNum << endl;
-        }
-
-
-
-        //bulk-receive ACKs
-        if(sock.pollRecvFrom() > 0)
-        {
-            sock.recvFrom((char*)transmission, sizeof(&transmission));
-
-
-            int index = *transmission % windowSize;
-
-            cout << "\t\tPackage rec'd: " << *transmission << endl;
-
-            if(*transmission < lastFrameAckd)
-            {
-                lastFrameSent = *transmission;
-                continue;
-            }
-            if(*transmission == lastFrameAckd)
-            {
-
-                //accept the ack
-                window[index] = *transmission;
-
-                //move the marker
-                pendingAcks--;
-
-                cout << "\t\t\tNext package Acked: " << *transmission << endl;
-                while(window[index] > -1)
-                {
-                    window[index] = -1;
-                    lastFrameAckd++;
-                    index = lastFrameAckd % windowSize;
-                }
-            }
-            else
-            {
-                cout << "\t\t\t\tOther package acked: " << *transmission << endl;
-                window[index] = *transmission;
-                pendingAcks--;
-            }
-
-            continue;
-        }
-
-        //cout << "\tstart stopwatch" << endl;
-        stopwatch.start();
-
-        //poll for ACKs
-        if(sock.pollRecvFrom() <= 0)
-        {
-            usleep(1);
-
-            //check if timed out
-            if(stopwatch.lap() >= timeoutLength)
-            {
-                //notify of failure and flag it
-                cout << error_ACKTimeout << endl;
-                ackTimedOut = true;
-                break;
-            }
-        }
-
-
-        //cout << "\tcheck timeout" <<endl;
-        if(ackTimedOut)
-        {
-            //reset flag
-            ackTimedOut = false;
-            cout << "\t\t\tack timed out, resending " << lastFrameAckd << endl;
-
-            transmission[0] = lastFrameAckd;
-            sock.sendTo((char*)transmission, sizeof(&transmission));
-            cout << msg_packetSent << (lastFrameAckd + 1) << endl;
-        }
-    }
-}
 
 
