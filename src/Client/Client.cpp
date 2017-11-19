@@ -250,7 +250,7 @@ void threewayHandshake(int packet[])
         {
             cout << "Replying to handshake, sending SYNACK" << endl;
             //start of the handshake
-            seqNum = packet[SeqNumIndex]++;
+            seqNum = ++packet[SeqNumIndex];
             packet[SeqNumIndex] = seqNum;
             packet[FlagIndex] = SYNACK;
 
@@ -263,7 +263,7 @@ void threewayHandshake(int packet[])
 
         if(packet[SeqNumIndex] == seqNum +1)
         {
-            seqNum = packet[SeqNumIndex]++;
+            seqNum = ++packet[SeqNumIndex];
             packet[SeqNumIndex] = seqNum;
 
 
