@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 const int SYN    = 0;
 const int ACK    = 1;
 const int SYNACK = 2;
-const int RECD   = 3;
+//const int RECD   = 3;
 const int END    = 4;
 const int ENDACK = 5;
 
@@ -314,7 +314,7 @@ void threewayHandshake(int packet[])
             //start of the handshake
             seqNum = ++packet[SeqNumIndex];
             //packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = RECD;
+            packet[FlagIndex] = ACK;
 
             isASyn = false;
 
@@ -324,13 +324,13 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum)
+        if(packet[SeqNumIndex] == seqNum + 1)
         {
 
 
             if(packet[FlagIndex] == SYN)
             {
-                packet[FlagIndex] = RECD;
+                packet[FlagIndex] = ACK;
                 cout << "regular ack " << endl;
                 cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
                 sock.ackTo((char*)packet, sizeof(&packet));
@@ -351,7 +351,7 @@ void threewayHandshake(int packet[])
                 return;
             }
 
-            if(packet[FlagIndex] == RECD)
+            if(packet[FlagIndex] == ACK)
             {
                 seqNum = ++packet[SeqNumIndex];
                 packet[SeqNumIndex] = seqNum;
