@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 const int SYN    = 0;
 const int ACK    = 1;
 const int SYNACK = 2;
-//const int RECD   = 3;
+const int RECD   = 3;
 const int END    = 4;
 const int ENDACK = 5;
 
@@ -314,13 +314,42 @@ void threewayHandshake(int packet[])
             //start of the handshake
             seqNum = ++packet[SeqNumIndex];
             //packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = ACK;
+            packet[FlagIndex] = RECD;
 
             isASyn = false;
 
             cout << "Handshake complete - Ack like normal" << endl;
             cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
             sock.ackTo((char*)packet, sizeof(&packet));
+            continue;
+        }
+
+        if(packet[SeqNumIndex]==seqNum)
+        {
+            if(packet[FlagIndex] == ENDACK)
+            {
+                return;
+            }
+
+            seqNum = ++packet[SeqNumIndex];
+            packet[SeqNumIndex] = seqNum;
+
+
+            if(seqNum == MAX_PACKETS)
+            {
+                packet[FlagIndex] = END;
+                cout << "Start ending handshake " << endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            }
+            else
+            {
+                packet[FlagIndex] = SYN;
+                cout << "regular traffic " << endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+            }
+            sock.sendTo((char*)packet, sizeof(&packet));
+            isASyn = true;
             continue;
         }
 
@@ -350,8 +379,8 @@ void threewayHandshake(int packet[])
                 sock.ackTo((char*)packet, sizeof(&packet));
                 return;
             }
-
-            if(packet[FlagIndex] == ACK)
+            /*
+            if(packet[FlagIndex] == RECD)
             {
                 seqNum = ++packet[SeqNumIndex];
                 packet[SeqNumIndex] = seqNum;
@@ -381,6 +410,7 @@ void threewayHandshake(int packet[])
             {
                 return;
             }
+            */
         }
     }
 }
