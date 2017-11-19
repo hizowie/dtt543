@@ -318,22 +318,34 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[FlagIndex] == ACK) //packet[SeqNumIndex] == seqNum+1 &&
+
+        if(packet[FlagIndex] == ACK && packet[SeqNumIndex] == seqNum+1)
         {
+            if(isSender)
+            {
+                cout << "Handshake complete "<< endl;
+                return;
+            }
+
             cout << "Handshake Step 3) Receiver-to-Sender ACK - [Completed]" << endl;
             //start of the handshake
             seqNum = ++packet[SeqNumIndex];
             packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = RECD;
+            packet[FlagIndex] = ACK;
 
             isASyn = false;
 
             cout << "Handshake complete - recd" << endl;
             cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
             sock.ackTo((char*)packet, sizeof(&packet));
-            continue;
+
+            return;
+            //continue;
+
         }
 
+
+/*
         if(packet[SeqNumIndex] <= seqNum + 1)
         {
             if(isASyn)
@@ -392,6 +404,7 @@ void threewayHandshake(int packet[])
             sock.ackTo((char*)packet, sizeof(&packet));
             return;
         }
+        */
 
     }
 }
