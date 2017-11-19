@@ -27,6 +27,354 @@ using namespace std;
 #include <limits.h>
 #include <vector>
 
+#include <cstdlib>
+#include <unistd.h>
+
+
+#define DEBUG true
+
+
+
+
+const int MAX_TESTID = 4;
+const int MIN_TESTID = 1;
+const int MIN_PORT = 0;
+const int MAX_PORT = 65535;
+const int MAX_ATTEMPTS = 10;
+const int MAX_UDP_PAYLOAD = 1472;
+
+void printMainArguments(int argc, char* argv[])
+{
+    cout << "Main arguments count: " << argc << endl;
+
+    for(int i = 0; i < argc; i++)
+        cout << "argv[" << i << "] = " << argv[i] << endl;
+
+    cout << endl;
+}
+
+bool isNumber(const char* input)
+{
+    if((input != NULL && input[0] == '\0') || ((!isdigit(input[0]))&& (input[0] != '-') && (input[0] != '+')))
+        return false ;
+
+    char * p ;
+    strtol(input, &p, 10) ;
+
+    return (*p == 0);
+}
+
+bool validateInput(int argc, char* argv[])
+{
+    if(argc < 2)
+    {
+        cout << "main() needs at least 2 arguments: the testId and the portNumber" << endl;
+        return false;
+    }
+
+    char* p;
+
+    if(!(isNumber(argv[1])))
+    {
+        cout << "the first argument to main must be a valid testId" << endl;
+        cout <<  "\tprovided argument: " << argv[1] <<endl;
+        return false;
+    }
+
+    if(atoi(argv[1]) < MIN_TESTID)
+    {
+        cout << "the provided testId must be greater than " << (MIN_TESTID - 1) << endl;
+        return false;
+    }
+
+    if(atoi(argv[1]) > MAX_TESTID)
+    {
+        cout << "the provided testId must be less than " << (MAX_TESTID + 1) << endl;
+        return false;
+    }
+
+
+    if(!(isNumber(argv[2])))
+    {
+        cout << "the first argument to main must be a valid portNumber" << endl;
+        cout <<  "\tprovided argument: " << argv[2] <<endl;
+        return false;
+    }
+
+    if(atoi(argv[2]) < MIN_PORT)
+    {
+        cout << "the provided port must be greater than " << (MIN_PORT - 1) << endl;
+        return false;
+    }
+
+    if(atoi(argv[2]) > MAX_PORT)
+    {
+        cout << "the provided port must be less than " << (MAX_PORT + 1) << endl;
+        return false;
+    }
+
+    return true;
+}
+
+void threewayHandshake(int packet[]);
+void nagelsAlgorithm();
+void udpDelayedAck();
+void tcpGetName();
+
+int port;
+char* destAddress;
+bool isSender;
+
+
+int main(int argc, char* argv[])
+{
+    if(DEBUG)
+        printMainArguments(argc, argv);
+
+    if(!validateInput(argc, argv))
+        return 0;
+
+    int testId = atoi(argv[1]);
+    port = atoi(argv[2]);
+
+    if(argc > 2)
+    {
+        isSender = false;
+        destAddress = argv[3];
+    }
+    else
+    {
+        isSender = true;
+    }
+
+
+    int packet[MAX_UDP_PAYLOAD/sizeof(int)];
+
+    switch(testId)
+    {
+    case 2:
+        nagelsAlgorithm();
+        break;
+    case 3:
+        udpDelayedAck();
+        break;
+    case 4:
+        tcpGetName();
+        break;
+    case 1: //intentional fall-through
+    default:
+        threewayHandshake(packet);
+        break;
+    }
+}
+
+const int SYN    = 0;
+const int ACK    = 1;
+const int SYNACK = 2;
+const int END    = 3;
+const int ENDACK = 4;
+
+const int SeqNumIndex = 0;
+const int FlagIndex = 1;
+
+
+void threewayHandshake(int packet[])
+{
+    fd_set readset;
+    FD_ZERO(&readset);
+    FD_SET(0, &readset);
+
+
+    //create the socket
+    UdpSocket sock(port);
+
+
+    bool ackTimedOut = false;
+    //bool pendingInput = true;
+    int attemptCount = MAX_ATTEMPTS;
+    int timeoutLength = 250; //timeout in microseconds
+    Timer stopwatch;
+    struct timeval tv;
+    tv.tv_usec = 1;
+    int quitRequest;
+    bool quitting = false;
+
+
+    int seqNum = 0;
+
+
+
+    if(isSender)
+    {
+        if(!sock.setDestAddress(destAddress))
+        {
+            //set the destination address
+            cout << "!sock.setDestAddress(" << destAddress << ")" << endl;
+            return;
+        }
+
+        seqNum = 0;
+
+        packet[SeqNumIndex] = seqNum;
+        packet[FlagIndex] = SYN;
+
+        sock.sendTo((char*)packet, sizeof(&packet));
+    }
+    else
+    {
+        int counter = 0;
+
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+        }
+    }
+
+
+    while(attemptCount > 0)
+    {
+        sock.recvFrom((char*)packet, sizeof(&packet));
+
+        attemptCount = MAX_ATTEMPTS;
+
+
+        //read the data from the packet
+        if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
+        {
+            //start of the handshake
+            seqNum = packet[SeqNumIndex]++;
+            packet[SeqNumIndex] = seqNum;
+            packet[FlagIndex] = SYNACK;
+
+            //receiver reply to handshake
+            sock.sendTo((char*)packet, sizeof(&packet));
+            continue;
+        }
+
+
+        if(packet[SeqNumIndex] == seqNum +1)
+        {
+            seqNum = packet[SeqNumIndex]++;
+            packet[SeqNumIndex] = seqNum;
+
+
+            if(packet[FlagIndex] == SYNACK)
+            {
+                packet[FlagIndex] = ACK;
+            }
+            else if(packet[FlagIndex] == ACK)
+            {
+                packet[FlagIndex] = SYN;
+            }
+            else if(packet[FlagIndex] == END)
+            {
+                packet[FlagIndex] = ENDACK;
+
+                sock.sendTo((char*)packet, sizeof(&packet));
+                sock.sendTo((char*)packet, sizeof(&packet));
+                return;
+            }
+
+            else if(packet[FlagIndex] == ENDACK)
+            {
+                return;
+            }
+
+
+            sock.sendTo((char*)packet, sizeof(&packet));
+        }
+
+
+        stopwatch.start();
+        while(sock.pollRecvFrom() <= 0)
+        {
+            //usleep(1);
+            quitRequest = select(1, &readset, NULL, NULL, &tv);
+
+            if(quitRequest)
+            {
+                quitting = true;
+                break;
+            }
+
+            if(stopwatch.lap() >= timeoutLength)
+            {
+                //notify of failure and flag it
+                cout << "\tfailed to receive packet within timeout " << endl;
+                ackTimedOut = true;
+                break;
+            }
+        }
+
+        if(ackTimedOut)
+        {
+            cout << "\tresending previous packet " << endl;
+            sock.sendTo((char*)packet, sizeof(&packet));
+
+            attemptCount--;
+            ackTimedOut = false;
+            continue;
+        }
+
+
+        if(quitting)
+        {
+            packet[SeqNumIndex] = seqNum;
+            packet[FlagIndex] = END;
+
+            sock.sendTo((char*)packet, sizeof(&packet));
+            sock.sendTo((char*)packet, sizeof(&packet));
+            continue;
+        }
+    }
+}
+
+
+
+void nagelsAlgorithm()
+{
+    fd_set rfds;
+        struct timeval tv;
+        int retval;
+
+       /* Watch stdin (fd 0) to see when it has input. */
+        FD_ZERO(&rfds);
+        FD_SET(0, &rfds);
+
+       /* Wait up to five seconds. */
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
+
+       retval = select(1, &rfds, NULL, NULL, &tv);
+        /* Don't rely on the value of tv now! */
+
+       if (retval == -1)
+            perror("select()");
+        else if (retval)
+            printf("Data is available now.\n");
+            /* FD_ISSET(0, &rfds) will be true. */
+        else
+            printf("No data within five seconds.\n");
+
+       exit(EXIT_SUCCESS);
+}
+void udpDelayedAck()
+{
+
+}
+void tcpGetName()
+{
+
+}
+
+
+
+
+
+
+
+
+/*
 #define TOTAL_PACKETS 20000
 #define MAX_UDP_PAYLOAD 1472
 
@@ -137,11 +485,6 @@ int getWindowSize(const char int testId, const char* input)
 
 
 
-void sendStopAndWait(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength );
-void sendSelectiveRepeat(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
-void sendGoBackN(UdpSocket &sock, int transmission[], const int sendCount, const int timeoutLength, const int windowSize);
-
-
 int getPort(const char* input);
 
 int getPort(const char* input)
@@ -172,7 +515,7 @@ int getAddress(const char* input)
 }
 
 
-void printDebug
+void printDebug()
 {
     for(int i = 0; i < argc; i++)
     {
@@ -271,7 +614,7 @@ typedef struct
     u_char lastAckRecd;
     u_char lastFrameSent;
     u_char nextFrameExpected;
-    Semaphone sendWindowNotFull;
+    //Semaphore sendWindowNotFull;
     infoheader header;
     
 } infopacket;
@@ -379,7 +722,7 @@ void sendHandshake(const int timeoutLength, )
     
 }
 
-
+*/
 
 
 
