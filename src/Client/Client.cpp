@@ -317,8 +317,8 @@ void threewayHandshake(int packet[])
         {
             cout << "Handshake Step 3) Receiver-to-Sender - [Completed]" << endl;
             //start of the handshake
-            //seqNum = ++packet[SeqNumIndex];
-            //packet[SeqNumIndex] = seqNum;
+            seqNum = ++packet[SeqNumIndex];
+            packet[SeqNumIndex] = seqNum;
             //packet[FlagIndex] = ACK;
 
             isASyn = false;
