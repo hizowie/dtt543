@@ -324,7 +324,7 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum + 1)
+        if(packet[SeqNumIndex] == seqNum)
         {
 
 
