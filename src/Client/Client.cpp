@@ -45,7 +45,7 @@ const int MAX_UDP_PAYLOAD = 1472;
 
 void printMainArguments(int argc, char* argv[])
 {
-    cout << "Main arguments count: " << argc << endl;
+    cout << "main() argc = " << argc << endl;
 
     for(int i = 0; i < argc; i++)
         cout << "argv[" << i << "] = " << argv[i] << endl;
@@ -137,14 +137,14 @@ int main(int argc, char* argv[])
     int testId = atoi(argv[1]);
     port = atoi(argv[2]);
 
-    if(argc > 2)
+    if(argc > 3)
     {
         isSender = true;
         destAddress = argv[3];
     }
     else
     {
-        isSender = true;
+        isSender = false;
     }
 
 
@@ -199,6 +199,9 @@ void threewayHandshake(int packet[])
 
     int seqNum = 0;
 
+    //init the array
+    for(int i = 0; i < MAX_UDP_PAYLOAD/sizeof(int); i++)
+        packet[i] = -1;
 
 
     if(isSender)
