@@ -189,7 +189,7 @@ void threewayHandshake(int packet[])
     bool ackTimedOut = false;
     //bool pendingInput = true;
     //int attemptCount = MAX_ATTEMPTS;
-    int timeoutLength = 1500; //timeout in microseconds
+    int timeoutLength = 15000000; //timeout in microseconds
     Timer stopwatch;
     struct timeval tv;
     tv.tv_usec = 1;
