@@ -296,15 +296,7 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] <= seqNum + 1)
-        {
-            if(isASyn)
-                sock.sendTo((char*)packet, sizeof(&packet));
-            else
-                sock.ackTo((char*)packet, sizeof(&packet));
 
-            continue;
-        }
 
 
 
@@ -342,6 +334,15 @@ void threewayHandshake(int packet[])
             continue;
         }
 
+        if(packet[SeqNumIndex] <= seqNum + 1)
+        {
+            if(isASyn)
+                sock.sendTo((char*)packet, sizeof(&packet));
+            else
+                sock.ackTo((char*)packet, sizeof(&packet));
+
+            continue;
+        }
 
         if(packet[FlagIndex] == RECD)
         {
