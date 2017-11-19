@@ -171,8 +171,9 @@ int main(int argc, char* argv[])
 const int SYN    = 0;
 const int ACK    = 1;
 const int SYNACK = 2;
-const int END    = 3;
-const int ENDACK = 4;
+const int RECD   = 3;
+const int END    = 4;
+const int ENDACK = 5;
 
 const int SeqNumIndex = 0;
 const int FlagIndex = 1;
@@ -187,13 +188,9 @@ void threewayHandshake(int packet[])
     bool isConnected = false;
 
     bool ackTimedOut = false;
-    //bool pendingInput = true;
-    //int attemptCount = MAX_ATTEMPTS;
+
     int timeoutLength = 15000000; //timeout in microseconds
     Timer stopwatch;
-    struct timeval tv;
-    tv.tv_usec = 1;
-    int quitRequest;
     bool isASyn = false;
 
 
@@ -273,7 +270,7 @@ void threewayHandshake(int packet[])
 
         sock.recvFrom((char*)packet, sizeof(&packet));
         isConnected = true;
-        //attemptCount = MAX_ATTEMPTS;
+
 
 
         //read the data from the packet
@@ -317,7 +314,7 @@ void threewayHandshake(int packet[])
             //start of the handshake
             seqNum = ++packet[SeqNumIndex];
             //packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = ACK;
+            packet[FlagIndex] = RECD;
 
             isASyn = false;
 
@@ -327,13 +324,13 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum)
+        if(packet[SeqNumIndex] == seqNum + 1)
         {
 
 
             if(packet[FlagIndex] == SYN)
             {
-                packet[FlagIndex] = ACK;
+                packet[FlagIndex] = RECD;
                 cout << "regular ack " << endl;
                 cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
                 sock.ackTo((char*)packet, sizeof(&packet));
@@ -353,7 +350,7 @@ void threewayHandshake(int packet[])
                 return;
             }
 
-            if(packet[FlagIndex] == ACK)
+            if(packet[FlagIndex] == RECD)
             {
                 seqNum = ++packet[SeqNumIndex];
                 packet[SeqNumIndex] = seqNum;
