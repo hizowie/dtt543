@@ -184,12 +184,12 @@ void threewayHandshake(int packet[])
 {
     //create the socket
     UdpSocket sock(port);
-
+    bool isConnected = false;
 
     bool ackTimedOut = false;
     //bool pendingInput = true;
     //int attemptCount = MAX_ATTEMPTS;
-    int timeoutLength = 250; //timeout in microseconds
+    int timeoutLength = 1500; //timeout in microseconds
     Timer stopwatch;
     struct timeval tv;
     tv.tv_usec = 1;
@@ -202,6 +202,7 @@ void threewayHandshake(int packet[])
     //init the array
     for(int i = 0; i < MAX_UDP_PAYLOAD/sizeof(int); i++)
         packet[i] = -1;
+
 
 
     if(isSender)
@@ -241,8 +242,32 @@ void threewayHandshake(int packet[])
 
     while(true) //attemptCount > 0)
     {
-        sock.recvFrom((char*)packet, sizeof(&packet));
+        stopwatch.start();
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+            if(stopwatch.lap() >= timeoutLength && isConnected)
+            {
+                //notify of failure and flag it
+                cout << "\tfailed to receive packet within timeout " << endl;
+                ackTimedOut = true;
+                break;
+            }
+        }
 
+        if(ackTimedOut)
+        {
+            cout << "\tresending previous packet " << endl;
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            sock.sendTo((char*)packet, sizeof(&packet));
+
+            //attemptCount--;
+            ackTimedOut = false;
+            continue;
+        }
+
+        sock.recvFrom((char*)packet, sizeof(&packet));
+        isConnected = true;
         //attemptCount = MAX_ATTEMPTS;
 
 
@@ -307,31 +332,6 @@ void threewayHandshake(int packet[])
 
 
             sock.sendTo((char*)packet, sizeof(&packet));
-        }
-
-
-        stopwatch.start();
-        while(sock.pollRecvFrom() <= 0)
-        {
-            usleep(1);
-            if(stopwatch.lap() >= timeoutLength)
-            {
-                //notify of failure and flag it
-                cout << "\tfailed to receive packet within timeout " << endl;
-                ackTimedOut = true;
-                break;
-            }
-        }
-
-        if(ackTimedOut)
-        {
-            cout << "\tresending previous packet " << endl;
-            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-            sock.sendTo((char*)packet, sizeof(&packet));
-
-            //attemptCount--;
-            ackTimedOut = false;
-            continue;
         }
     }
 }
@@ -489,9 +489,6 @@ void nagelsAlgorithm(int packet[])
 
             sock.sendTo((char*)packet, sizeof(&packet));
         }
-
-
-
     }
 }
 void udpDelayedAck()
