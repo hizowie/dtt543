@@ -278,7 +278,7 @@ void threewayHandshake(int packet[])
 
 
         //read the data from the packet
-        if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
+        if(packet[SeqNumIndex] == seqNum && packet[FlagIndex] == SYN)
         {
             cout << "Replying to handshake, sending SYNACK" << endl;
             //start of the handshake
@@ -294,6 +294,21 @@ void threewayHandshake(int packet[])
             continue;
         }
 
+        if(packet[SeqNumIndex] == seqNum && packet[FlagIndex] == ACK)
+        {
+            cout << "Completed handshake, sending SYNACK" << endl;
+            //start of the handshake
+            seqNum = ++packet[SeqNumIndex];
+            packet[SeqNumIndex] = seqNum;
+            packet[FlagIndex] = ACK;
+
+            isASyn = true;
+
+            //receiver reply to handshake
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            sock.sendTo((char*)packet, sizeof(&packet));
+            continue;
+        }
 
         if(packet[SeqNumIndex] == seqNum +1)
         {
