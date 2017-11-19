@@ -335,6 +335,7 @@ void threewayHandshake(int packet[])
                 cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
                 sock.ackTo((char*)packet, sizeof(&packet));
                 seqNum = ++packet[SeqNumIndex];
+                isASyn = false;
                 continue;
             }
 
@@ -370,6 +371,7 @@ void threewayHandshake(int packet[])
 
                 }
                 sock.sendTo((char*)packet, sizeof(&packet));
+                isASyn = true;
                 continue;
             }
 
