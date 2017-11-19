@@ -117,7 +117,7 @@ bool validateInput(int argc, char* argv[])
 }
 
 void threewayHandshake(int packet[]);
-void nagelsAlgorithm();
+void nagelsAlgorithm(int packet[]);
 void udpDelayedAck();
 void tcpGetName();
 
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
     switch(testId)
     {
     case 2:
-        nagelsAlgorithm();
+        nagelsAlgorithm(packet);
         break;
     case 3:
         udpDelayedAck();
@@ -236,6 +236,7 @@ void threewayHandshake(int packet[])
             usleep(1);
         }
     }
+
 
 
     while(true) //attemptCount > 0)
@@ -337,32 +338,161 @@ void threewayHandshake(int packet[])
 
 
 
-void nagelsAlgorithm()
+void nagelsAlgorithm(int packet[])
 {
-    fd_set rfds;
-        struct timeval tv;
-        int retval;
+    //create the socket
+    UdpSocket sock(port);
+    bool isConnected = false;
 
-       /* Watch stdin (fd 0) to see when it has input. */
-        FD_ZERO(&rfds);
-        FD_SET(0, &rfds);
+    bool ackTimedOut = false;
+    //bool pendingInput = true;
+    //int attemptCount = MAX_ATTEMPTS;
+    int timeoutLength = 250; //timeout in microseconds
+    Timer stopwatch;
+    struct timeval tv;
+    tv.tv_usec = 1;
+    int quitRequest;
+    bool quitting = false;
 
-       /* Wait up to five seconds. */
-        tv.tv_sec = 5;
-        tv.tv_usec = 0;
 
-       retval = select(1, &rfds, NULL, NULL, &tv);
-        /* Don't rely on the value of tv now! */
+    int seqNum = 0;
 
-       if (retval == -1)
-            perror("select()");
-        else if (retval)
-            printf("Data is available now.\n");
-            /* FD_ISSET(0, &rfds) will be true. */
-        else
-            printf("No data within five seconds.\n");
+    //init the array
+    for(int i = 0; i < MAX_UDP_PAYLOAD/sizeof(int); i++)
+        packet[i] = -1;
 
-       exit(EXIT_SUCCESS);
+    cout << "part 1 " <<endl;
+
+    if(isSender)
+    {
+        cout << "acting as sender, sending SYN" << endl;
+
+
+        if(!sock.setDestAddress(destAddress))
+        {
+            //set the destination address
+            cout << "!sock.setDestAddress(" << destAddress << ")" << endl;
+            return;
+        }
+        isConnected = true;
+
+        seqNum = 0;
+        packet[SeqNumIndex] = seqNum;
+        packet[FlagIndex] = SYN;
+
+
+        cout << "\tseqNum " << seqNum << "; SYN " << SYN << endl;
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+        sock.sendTo((char*)packet, sizeof(&packet));
+    }
+    else
+    {
+        cout << "acting as receiver " << endl;
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+        cout <<  "still goign " << endl;
+    }
+
+    cout << "part 2 " <<endl;
+
+
+    while(true) //attemptCount > 0)
+    {
+        stopwatch.start();
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+            if(stopwatch.lap() >= timeoutLength && isConnected)
+            {
+                //notify of failure and flag it
+                cout << "\tfailed to receive packet within timeout " << endl;
+                ackTimedOut = true;
+                break;
+            }
+        }
+
+        if(ackTimedOut)
+        {
+            cout << "\tresending previous packet " << endl;
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            sock.sendTo((char*)packet, sizeof(&packet));
+
+            //attemptCount--;
+            ackTimedOut = false;
+            continue;
+        }
+
+        sock.recvFrom((char*)packet, sizeof(&packet));
+        isConnected = true;
+        //attemptCount = MAX_ATTEMPTS;
+
+
+        //read the data from the packet
+        if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
+        {
+            cout << "Replying to handshake, sending SYNACK" << endl;
+            //start of the handshake
+            seqNum = ++packet[SeqNumIndex];
+            packet[SeqNumIndex] = seqNum;
+            packet[FlagIndex] = SYNACK;
+
+            //receiver reply to handshake
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            sock.sendTo((char*)packet, sizeof(&packet));
+            continue;
+        }
+
+
+        if(packet[SeqNumIndex] == seqNum +1)
+        {
+            seqNum = ++packet[SeqNumIndex];
+            packet[SeqNumIndex] = seqNum;
+
+
+            if(packet[FlagIndex] == SYNACK)
+            {
+                cout << "Finishing handshake, sending ACK " << endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+                packet[FlagIndex] = ACK;
+            }
+            else if(packet[FlagIndex] == ACK)
+            {
+                if(seqNum == MAX_PACKETS)
+                {
+                    cout << "Start ending handshake " << endl;
+                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+                    packet[FlagIndex] = END;
+                }
+                else
+                {
+                    cout << "regular traffic " << endl;
+                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+                    packet[FlagIndex] = SYN;
+                }
+            }
+            else if(packet[FlagIndex] == END)
+            {
+                cout << "Finish ending handshake " <<endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+                packet[FlagIndex] = ENDACK;
+
+                sock.sendTo((char*)packet, sizeof(&packet));
+                sock.sendTo((char*)packet, sizeof(&packet));
+                return;
+            }
+
+            else if(packet[FlagIndex] == ENDACK)
+            {
+                return;
+            }
+
+
+            sock.sendTo((char*)packet, sizeof(&packet));
+        }
+
+
+
+    }
 }
 void udpDelayedAck()
 {
