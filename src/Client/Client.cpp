@@ -273,6 +273,10 @@ void threewayHandshake(int packet[])
 
         cout << "\t\tp[SNII] : " << packet[SeqNumIndex] << "; local seqNum (" << seqNum << "); p[FI] : "<< packet[FlagIndex] << endl;
 
+        if(packet[FlagIndex] == ENDACK)
+        {
+            return;
+        }
 
         //read the data from the packet
         if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
@@ -292,7 +296,20 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex]== seqNum+1 && packet[FlagIndex] == SYNACK)
+        if(packet[SeqNumIndex] <= seqNum + 1)
+        {
+            if(isASyn)
+                sock.sendTo((char*)packet, sizeof(&packet));
+            else
+                sock.ackTo((char*)packet, sizeof(&packet));
+
+            continue;
+        }
+
+
+
+
+        if(packet[FlagIndex] == SYNACK)//packet[SeqNumIndex]== seqNum+1 &&
         {
             cout << "Handshake Step 2) Receiver-to-Sender SYNACK - [Completed]" << endl;
 
@@ -309,29 +326,25 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum+1 && packet[FlagIndex] == ACK)
+        if(packet[FlagIndex] == ACK) //packet[SeqNumIndex] == seqNum+1 &&
         {
             cout << "Handshake Step 3) Receiver-to-Sender ACK - [Completed]" << endl;
             //start of the handshake
             seqNum = ++packet[SeqNumIndex];
-            //packet[SeqNumIndex] = seqNum;
+            packet[SeqNumIndex] = seqNum;
             packet[FlagIndex] = RECD;
 
             isASyn = false;
 
-            cout << "Handshake complete - Ack like normal" << endl;
+            cout << "Handshake complete - recd" << endl;
             cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
             sock.ackTo((char*)packet, sizeof(&packet));
             continue;
         }
 
-        if(packet[SeqNumIndex]==seqNum)
-        {
-            if(packet[FlagIndex] == ENDACK)
-            {
-                return;
-            }
 
+        if(packet[FlagIndex] == RECD)
+        {
             seqNum = ++packet[SeqNumIndex];
             packet[SeqNumIndex] = seqNum;
 
@@ -354,65 +367,31 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum + 1)
+
+
+        if(packet[FlagIndex] == SYN)
         {
-
-
-            if(packet[FlagIndex] == SYN)
-            {
-                packet[FlagIndex] = ACK;
-                cout << "regular ack " << endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                sock.ackTo((char*)packet, sizeof(&packet));
-                seqNum = ++packet[SeqNumIndex];
-                isASyn = false;
-                continue;
-            }
-
-            if(packet[FlagIndex] == END)
-            {
-                packet[FlagIndex] = ENDACK;
-
-                cout << "Finish ending handshake " <<endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-
-                sock.ackTo((char*)packet, sizeof(&packet));
-                sock.ackTo((char*)packet, sizeof(&packet));
-                return;
-            }
-            /*
-            if(packet[FlagIndex] == RECD)
-            {
-                seqNum = ++packet[SeqNumIndex];
-                packet[SeqNumIndex] = seqNum;
-
-
-                if(seqNum == MAX_PACKETS)
-                {
-                    packet[FlagIndex] = END;
-                    cout << "Start ending handshake " << endl;
-                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                }
-                else
-                {
-                    packet[FlagIndex] = SYN;
-                    cout << "regular traffic " << endl;
-                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-
-                }
-                sock.sendTo((char*)packet, sizeof(&packet));
-                isASyn = true;
-                continue;
-            }
-
-
-
-            if(packet[FlagIndex] == ENDACK)
-            {
-                return;
-            }
-            */
+            packet[FlagIndex] = ACK;
+            cout << "regular ack " << endl;
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+            sock.ackTo((char*)packet, sizeof(&packet));
+            seqNum = ++packet[SeqNumIndex];
+            isASyn = false;
+            continue;
         }
+
+        if(packet[FlagIndex] == END)
+        {
+            packet[FlagIndex] = ENDACK;
+
+            cout << "Finish ending handshake " <<endl;
+            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+            sock.ackTo((char*)packet, sizeof(&packet));
+            sock.ackTo((char*)packet, sizeof(&packet));
+            return;
+        }
+
     }
 }
 
@@ -461,114 +440,72 @@ void nagelsAlgorithm(int packet[])
         packet[FlagIndex] = SYN;
 
 
-        cout << "\tseqNum " << seqNum << "; SYN " << SYN << endl;
-        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
         sock.sendTo((char*)packet, sizeof(&packet));
+
+
+
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+        }
+        sock.recvFrom((char*)packet, sizeof(&packet));
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+
+        cout << "incrementing seqNum and resending" << endl <<endl;
+        seqNum++;
+        packet[SeqNumIndex] = seqNum;
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
+        sock.sendTo((char*)packet, sizeof(&packet));
+
+
+
+        while(sock.pollRecvFrom() <= 0)
+        {
+            usleep(1);
+        }
+        sock.recvFrom((char*)packet, sizeof(&packet));
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+
+
+
     }
     else
     {
         cout << "acting as receiver " << endl;
-        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-
-        cout <<  "still goign " << endl;
-    }
-
-    cout << "part 2 " <<endl;
-
-
-    while(true) //attemptCount > 0)
-    {
-        stopwatch.start();
         while(sock.pollRecvFrom() <= 0)
         {
             usleep(1);
-            if(stopwatch.lap() >= timeoutLength && isConnected)
-            {
-                //notify of failure and flag it
-                cout << "\tfailed to receive packet within timeout " << endl;
-                ackTimedOut = true;
-                break;
-            }
         }
-
-        if(ackTimedOut)
-        {
-            cout << "\tresending previous packet " << endl;
-            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-            sock.sendTo((char*)packet, sizeof(&packet));
-
-            //attemptCount--;
-            ackTimedOut = false;
-            continue;
-        }
-
         sock.recvFrom((char*)packet, sizeof(&packet));
-        isConnected = true;
-        //attemptCount = MAX_ATTEMPTS;
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
 
 
-        //read the data from the packet
-        if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
+        cout << "sending ack" <<endl;
+
+        sock.ackTo((char*)packet, sizeof(&packet));
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
+
+
+        while(sock.pollRecvFrom() <= 0)
         {
-            cout << "Replying to handshake, sending SYNACK" << endl;
-            //start of the handshake
-            seqNum = ++packet[SeqNumIndex];
-            packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = SYNACK;
-
-            //receiver reply to handshake
-            cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-            sock.sendTo((char*)packet, sizeof(&packet));
-            continue;
+            usleep(1);
         }
+        sock.recvFrom((char*)packet, sizeof(&packet));
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
 
 
-        if(packet[SeqNumIndex] == seqNum +1)
-        {
-            seqNum = ++packet[SeqNumIndex];
-            packet[SeqNumIndex] = seqNum;
+        cout << "sending ack" <<endl;
+
+        sock.ackTo((char*)packet, sizeof(&packet));
+        cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; seqNum (" << seqNum << "); packet[FlagIndex]" << packet[FlagIndex] << endl;
 
 
-            if(packet[FlagIndex] == SYNACK)
-            {
-                cout << "Finishing handshake, sending ACK " << endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                packet[FlagIndex] = ACK;
-            }
-            else if(packet[FlagIndex] == ACK)
-            {
-                if(seqNum == MAX_PACKETS)
-                {
-                    cout << "Start ending handshake " << endl;
-                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                    packet[FlagIndex] = END;
-                }
-                else
-                {
-                    cout << "regular traffic " << endl;
-                    cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                    packet[FlagIndex] = SYN;
-                }
-            }
-            else if(packet[FlagIndex] == END)
-            {
-                cout << "Finish ending handshake " <<endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                packet[FlagIndex] = ENDACK;
-
-                sock.sendTo((char*)packet, sizeof(&packet));
-                sock.sendTo((char*)packet, sizeof(&packet));
-                return;
-            }
-
-            else if(packet[FlagIndex] == ENDACK)
-            {
-                return;
-            }
 
 
-            sock.sendTo((char*)packet, sizeof(&packet));
-        }
+
     }
 }
 void udpDelayedAck()
