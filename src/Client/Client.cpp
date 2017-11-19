@@ -271,7 +271,7 @@ void threewayHandshake(int packet[])
         sock.recvFrom((char*)packet, sizeof(&packet));
         isConnected = true;
 
-        cout << "\t\tp[SNII] : " << packet[SeqNumIndex] << "; p[FI] : "<< packet[FlagIndex] << endl;
+        cout << "\t\tp[SNII] : " << packet[SeqNumIndex] << "local seqNum (" << seqNum << "); p[FI] : "<< packet[FlagIndex] << endl;
 
 
         //read the data from the packet
