@@ -311,7 +311,7 @@ void threewayHandshake(int packet[])
             continue;
         }
 
-        if(packet[SeqNumIndex] == seqNum && packet[FlagIndex] == ACK)
+        if(packet[SeqNumIndex] == seqNum+1 && packet[FlagIndex] == ACK)
         {
             cout << "Handshake Step 3) Receiver-to-Sender ACK - [Completed]" << endl;
             //start of the handshake
