@@ -303,34 +303,37 @@ void threewayHandshake(int packet[])
 
             if(packet[FlagIndex] == SYNACK)
             {
-                cout << "Finishing handshake, sending ACK " << endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
                 packet[FlagIndex] = ACK;
                 isASyn = false;
+
+                cout << "Finishing handshake, sending ACK " << endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
             }
             else if(packet[FlagIndex] == ACK)
             {
                 if(seqNum == MAX_PACKETS)
                 {
+                    packet[FlagIndex] = END;
                     cout << "Start ending handshake " << endl;
                     cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                    packet[FlagIndex] = END;
                 }
                 else
                 {
+                    packet[FlagIndex] = SYN;
                     cout << "regular traffic " << endl;
                     cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
-                    packet[FlagIndex] = SYN;
+
                 }
                 isASyn = true;
             }
 
             if(packet[FlagIndex] == END)
             {
-                cout << "Finish ending handshake " <<endl;
-                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
                 packet[FlagIndex] = ENDACK;
                 isASyn = false;
+
+                cout << "Finish ending handshake " <<endl;
+                cout << "\tpacket[SeqNumIndex]" << packet[SeqNumIndex] << "; packet[FlagIndex]" << packet[FlagIndex] << endl;
 
                 sock.ackTo((char*)packet, sizeof(&packet));
                 sock.ackTo((char*)packet, sizeof(&packet));
