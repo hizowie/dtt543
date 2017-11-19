@@ -40,7 +40,7 @@ const int MAX_TESTID = 4;
 const int MIN_TESTID = 1;
 const int MIN_PORT = 0;
 const int MAX_PORT = 65535;
-const int MAX_ATTEMPTS = 10;
+
 const int MAX_UDP_PAYLOAD = 1472;
 
 void printMainArguments(int argc, char* argv[])
@@ -176,15 +176,12 @@ const int ENDACK = 4;
 
 const int SeqNumIndex = 0;
 const int FlagIndex = 1;
+const int MAX_PACKETS = 10000;
 
+//const int MAX_ATTEMPTS = 100;
 
 void threewayHandshake(int packet[])
 {
-    fd_set readset;
-    FD_ZERO(&readset);
-    FD_SET(0, &readset);
-
-
     //create the socket
     UdpSocket sock(port);
 
@@ -206,6 +203,8 @@ void threewayHandshake(int packet[])
 
     if(isSender)
     {
+        cout << "acting as sender, sending SYN" << endl;
+
         if(!sock.setDestAddress(destAddress))
         {
             //set the destination address
@@ -222,7 +221,7 @@ void threewayHandshake(int packet[])
     }
     else
     {
-        int counter = 0;
+        cout << "acting as receiver " << endl;
 
         while(sock.pollRecvFrom() <= 0)
         {
@@ -231,16 +230,17 @@ void threewayHandshake(int packet[])
     }
 
 
-    while(attemptCount > 0)
+    while(true) //attemptCount > 0)
     {
         sock.recvFrom((char*)packet, sizeof(&packet));
 
-        attemptCount = MAX_ATTEMPTS;
+        //attemptCount = MAX_ATTEMPTS;
 
 
         //read the data from the packet
         if(packet[SeqNumIndex] == SYN && packet[FlagIndex] == SYN)
         {
+            cout << "Replying to handshake, sending SYNACK" << endl;
             //start of the handshake
             seqNum = packet[SeqNumIndex]++;
             packet[SeqNumIndex] = seqNum;
@@ -260,14 +260,28 @@ void threewayHandshake(int packet[])
 
             if(packet[FlagIndex] == SYNACK)
             {
+                cout << "Finishing handshake, sending ACK " << endl;
                 packet[FlagIndex] = ACK;
             }
             else if(packet[FlagIndex] == ACK)
             {
-                packet[FlagIndex] = SYN;
+                cout << "regular traffic " << endl;
+
+
+                if(seqNum == MAX_PACKETS)
+                {
+                    cout << "Start ending handshake " << endl;
+                    packet[FlagIndex] = END;
+                }
+                else
+                {
+                    cout << "regular traffic " << endl;
+                    packet[FlagIndex] = SYN;
+                }
             }
             else if(packet[FlagIndex] == END)
             {
+                cout << "Einish ending handshake " <<endl;
                 packet[FlagIndex] = ENDACK;
 
                 sock.sendTo((char*)packet, sizeof(&packet));
@@ -288,15 +302,7 @@ void threewayHandshake(int packet[])
         stopwatch.start();
         while(sock.pollRecvFrom() <= 0)
         {
-            //usleep(1);
-            quitRequest = select(1, &readset, NULL, NULL, &tv);
-
-            if(quitRequest)
-            {
-                quitting = true;
-                break;
-            }
-
+            usleep(1);
             if(stopwatch.lap() >= timeoutLength)
             {
                 //notify of failure and flag it
@@ -311,19 +317,8 @@ void threewayHandshake(int packet[])
             cout << "\tresending previous packet " << endl;
             sock.sendTo((char*)packet, sizeof(&packet));
 
-            attemptCount--;
+            //attemptCount--;
             ackTimedOut = false;
-            continue;
-        }
-
-
-        if(quitting)
-        {
-            packet[SeqNumIndex] = seqNum;
-            packet[FlagIndex] = END;
-
-            sock.sendTo((char*)packet, sizeof(&packet));
-            sock.sendTo((char*)packet, sizeof(&packet));
             continue;
         }
     }
