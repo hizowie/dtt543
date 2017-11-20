@@ -380,6 +380,11 @@ void nagelsReceiver()
     bool isConnected = false;
     int seqNum = 0;
 
+    vector<int> buffer;
+    buffer.push_back(0);
+    buffer.push_back(0);
+    buffer.push_back(0);
+
     vector<int> *packet;
 
     //int packet[MAX_UDP_PAYLOAD];
