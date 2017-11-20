@@ -463,10 +463,20 @@ void nagelsSender()
     int seqNum = 0;
     int len = 1;
 
-    vector<int> packet1;
-    vector<int> packet2;
+    //vector<int> packet1;
+    //vector<int> packet2;
 
+    int packet1[MAX_UDP_PAYLOAD];
+    int packet2[MAX_UDP_PAYLOAD];
     int acks[MAX_UDP_PAYLOAD];
+
+    for(int i = 0; i < MAX_UDP_PAYLOAD; i++)
+    {
+        packet1[i] = -1;
+        packet2[i] = -1;
+        acks[i] = -1;
+    }
+
 
     bool packet1Sending;
 
@@ -481,15 +491,15 @@ void nagelsSender()
 
 
     //create the initial packet
-    packet1.push_back(seqNum);
-    packet1.push_back(SYN);
-    packet1.push_back(len);
-    packet1.push_back(1);
+    packet1[SeqNumIndex] = seqNum;
+    packet1[FlagIndex] = SYN;
+    packet1[LenIndex] = len;
+    packet1[LenIndex+ 1] = -10+rand()*(10);
 
-    packet2.push_back(seqNum);
-    packet2.push_back(SYN);
-    packet2.push_back(len);
-    packet2.push_back(1);
+    packet2[SeqNumIndex] = seqNum;
+    packet2[FlagIndex] = SYN;
+    packet2[LenIndex] = len;
+    packet2[LenIndex+ 1] = -10+rand()*(10);
 
 
 
@@ -500,9 +510,7 @@ void nagelsSender()
 
     packet1Sending = true;
 
-    sock.sendTo((char*)&packet1[0], sizeof(&packet1));//sizeof(int)* 3);
-    //sock.sendTo((char*)buffer, sizeof(&buffer));
-
+    sock.sendTo((char*)&packet1, sizeof(&packet1));
 
     return;
 
@@ -516,18 +524,18 @@ void nagelsSender()
             if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD && len + seqNum < MAX_PACKETS)
             {
                 if(packet1Sending)
-                    packet1.push_back(-10+rand()*(10));
+                    packet1[len+1] = -10+rand()*(10);
                 else
-                    packet2.push_back(-10+rand()*(10));
+                    packet2[len+1] =-10+rand()*(10);
 
                 len++;
             }
             else
             {
                 if(packet1Sending)
-                    packet1.at(LenIndex) = len;
+                    packet1[LenIndex] = len;
                 else
-                    packet2.at(LenIndex) = len;
+                    packet2[LenIndex] = len;
 
                 cout << "len = " << len << endl;
             }
