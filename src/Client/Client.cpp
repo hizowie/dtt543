@@ -430,7 +430,7 @@ void nagelsReceiver(int packet[])
         cout << "\t\tseqNum = " << seqNum << endl;
         cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
 
-        return;
+
 
 
 
@@ -512,7 +512,7 @@ void nagelsSender(int packet[])
 
     sock.sendTo((char*)&buf1, sizeof(&buf1));
 
-    return;
+
 
 
     while (seqNum < MAX_PACKETS)
