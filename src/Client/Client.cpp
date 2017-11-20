@@ -375,7 +375,7 @@ void nagelsReceiver()
 {
     UdpSocket sock(port);
     Timer stopwatch;
-    int timeoutLength = 1000; //timeout in microseconds
+    int timeoutLength = 10000; //timeout in microseconds
     bool ackTimedOut = false;
     bool isConnected = false;
     int seqNum = 0;
@@ -437,8 +437,8 @@ void nagelsSender()
 {
     UdpSocket sock(port);
     Timer stopwatch;
-    int sendTimeout = 10; //timeout in microseconds
-    int recTimeout = 12;
+    int sendTimeout = 10000; //timeout in microseconds
+    int recTimeout = 12000;
 
     bool ackTimedOut = false;
     bool isConnected = false;
@@ -473,7 +473,8 @@ void nagelsSender()
 
     sender = &packet1[0];
 
-    cout << "\tsender[SeqNumIndex] = " << sender[SeqNumIndex] << "; sender[FlagIndex] = " << sender[FlagIndex] <<"; sender[LenIndex] = " << sender[LenIndex] << endl;
+
+    cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
 
     packet1Sending = true;
     sock.sendTo((char*)sender, sizeof(&sender));
@@ -484,19 +485,25 @@ void nagelsSender()
     buffer->push_back(SYN);
     buffer->push_back(len);
 
+    int number;
+
     while (seqNum < MAX_PACKETS)
     {
         while(sock.pollRecvFrom() <= 0)
         {
+            usleep(10);
             if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD)
             {
-                buffer->push_back(-250000+rand()*(500001));
+
+                buffer->push_back(-10+rand()*(10));
                 len++;
+
             }
             else
             {
                 it = buffer->begin();
                 buffer->insert(it + LenIndex, len);
+                cout << "len = " << len << endl;
             }
 
             if(stopwatch.lap() < recTimeout)
@@ -505,6 +512,10 @@ void nagelsSender()
                 break;
             }
         }
+
+        cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
+        cout << "\t\tp1[SeqNumIndex] = " << packet1[SeqNumIndex] << "; p1[FlagIndex] = " << packet1[FlagIndex] <<"; p1[LenIndex] = " << packet1[LenIndex] << endl;
+        cout << "\t\tp2[SeqNumIndex] = " << packet2[SeqNumIndex] << "; p2[FlagIndex] = " << packet2[FlagIndex] <<"; p2[LenIndex] = " << packet2[LenIndex] << endl;
 
         if(ackTimedOut)
         {
@@ -519,7 +530,7 @@ void nagelsSender()
         {
             seqNum = sender[seqNum];
 
-            cout << "\tsender[SeqNumIndex] = " << sender[SeqNumIndex] << "; sender[FlagIndex] = " << sender[FlagIndex] <<"; sender[LenIndex] = " << sender[LenIndex] << endl;
+            cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
 
             cout << "\tnew seqNum = " << seqNum << endl;
 
