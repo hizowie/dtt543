@@ -418,6 +418,17 @@ void nagelsReceiver()
         sock.recvFrom((char*)packet, sizeof(&packet));
         isConnected = true;
 
+        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
+        cout << "\t\tseqNum = " << seqNum << endl << endl;
+
+        seqNum += packet[LenIndex];
+        packet[SeqNumIndex] = seqNum;
+        cout << "\t\tseqNum = " << seqNum << endl;
+        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
+
+        return;
+
+
         if(packet[SeqNumIndex] == seqNum && packet[FlagIndex] == SYN)
         {
             cout << "\tSeqNum = " << seqNum << "; Length = " << packet[LenIndex] << endl;
@@ -489,10 +500,11 @@ void nagelsSender()
 
     while (seqNum < MAX_PACKETS)
     {
+        stopwatch.start();
         while(sock.pollRecvFrom() <= 0)
         {
-            usleep(10);
-            if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD)
+            usleep(100);
+            if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD && len + seqNum < MAX_PACKETS)
             {
 
                 buffer->push_back(-10+rand()*(10));
@@ -506,7 +518,7 @@ void nagelsSender()
                 cout << "len = " << len << endl;
             }
 
-            if(stopwatch.lap() < recTimeout)
+            if(stopwatch.lap() > recTimeout)
             {
                 ackTimedOut = true;
                 break;
@@ -539,11 +551,13 @@ void nagelsSender()
             {
                 sender = &packet2[0];
                 buffer = &packet1;
+                packet1Sending = false;
             }
             else
             {
                 sender = &packet1[0];
                 buffer = &packet2;
+                packet1Sending = true;
             }
 
 
