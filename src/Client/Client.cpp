@@ -49,6 +49,7 @@ const int MAX_TESTID = 4;
 const int MIN_TESTID = 1;
 const int MIN_PORT = 0;
 const int MAX_PORT = 65535;
+const int MAX_PACKETS = 10000;
 
 const int MAX_UDP_PAYLOAD = 1472/sizeof(int);
 
@@ -430,7 +431,7 @@ void nagelsReceiver()
     }
 }
 
-const int MAX_PACKETS = 10000;
+
 
 void nagelsSender()
 {
