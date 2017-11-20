@@ -385,10 +385,11 @@ void nagelsReceiver()
     buffer.push_back(0);
     buffer.push_back(0);
     buffer.push_back(0);
+    buffer.push_back(0);
 
-    int * packet = &buffer[0];
+    //int * packet = &buffer[0];
 
-    //int packet[MAX_UDP_PAYLOAD];
+    int packet[MAX_UDP_PAYLOAD];
 
     cout << "Acting as receiver " << endl;
 
@@ -426,8 +427,9 @@ void nagelsReceiver()
         sock.recvFrom((char*)packet, sizeof(&packet));
         isConnected = true;
 
-        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
         cout << "\t\tseqNum = " << seqNum << endl << endl;
+        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
+
 
         seqNum += packet[LenIndex];
         packet[SeqNumIndex] = seqNum;
@@ -435,6 +437,7 @@ void nagelsReceiver()
         cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
 
         return;
+
 
 
 
@@ -485,9 +488,9 @@ void nagelsSender()
 
 
     //create the initial packet
-    packet1.push_back(seqNum);
-    packet1.push_back(SYN);
-    packet1.push_back(len);
+    packet1.push_back(10);//seqNum);
+    packet1.push_back(11);//SYN);
+    packet1.push_back(12);//len);
     packet1.push_back(1);
 
 
@@ -499,8 +502,8 @@ void nagelsSender()
 
 
     packet1Sending = true;
-    //sock.sendTo((char*)sender, sizeof(&sender));
-    sock.sendTo((char*)buffer, sizeof(&buffer));
+    sock.sendTo((char*)sender, sizeof(&sender));
+    //sock.sendTo((char*)buffer, sizeof(&buffer));
 
 
     return;
