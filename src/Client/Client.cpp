@@ -381,10 +381,12 @@ void nagelsReceiver()
     int seqNum = 0;
 
 
-    vector<int> packet;
-    packet.push_back(0);
-    packet.push_back(0);
-    packet.push_back(0);
+    vector<int> buffer;
+    buffer.push_back(0);
+    buffer.push_back(0);
+    buffer.push_back(0);
+
+    int * packet = &buffer[0];
 
     //int packet[MAX_UDP_PAYLOAD];
 
@@ -424,26 +426,26 @@ void nagelsReceiver()
         sock.recvFrom((char*)packet, sizeof(&packet));
         isConnected = true;
 
-        cout << "\t\tp[SeqNumIndex] = " << packet->at(SeqNumIndex) << "; p[FlagIndex] = " << packet->at(FlagIndex) <<"; p[LenIndex] = " << packet->at(LenIndex) << endl;
+        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
         cout << "\t\tseqNum = " << seqNum << endl << endl;
 
-        seqNum += packet->at(LenIndex);
-        packet->at(SeqNumIndex) = seqNum;
+        seqNum += packet[LenIndex];
+        packet[SeqNumIndex] = seqNum;
         cout << "\t\tseqNum = " << seqNum << endl;
-        cout << "\t\tp[SeqNumIndex] = " << packet->at(SeqNumIndex) << "; p[FlagIndex] = " << packet->at(FlagIndex) <<"; p[LenIndex] = " << packet->at(LenIndex) << endl;
+        cout << "\t\tp[SeqNumIndex] = " << packet[SeqNumIndex] << "; p[FlagIndex] = " << packet[FlagIndex] <<"; p[LenIndex] = " << packet[LenIndex] << endl;
 
         return;
 
 
 
 
-        if(packet->at(SeqNumIndex) == seqNum && packet->at(LenIndex) == SYN)
+        if(packet[SeqNumIndex] == seqNum && packet[LenIndex] == SYN)
         {
-            cout << "\tSeqNum = " << seqNum << "; Length = " << packet->at(LenIndex) << endl;
+            cout << "\tSeqNum = " << seqNum << "; Length = " << packet[LenIndex] << endl;
 
-            seqNum += packet->at(LenIndex);
-            packet->at(SeqNumIndex) = seqNum;
-            packet->at(FlagIndex) = ACK;
+            seqNum += packet[LenIndex];
+            packet[SeqNumIndex] = seqNum;
+            packet[FlagIndex] = ACK;
 
             sock.ackTo((char*)packet, sizeof(&packet));
         }
