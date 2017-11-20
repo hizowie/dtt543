@@ -381,15 +381,9 @@ void nagelsReceiver()
     int seqNum = 0;
 
 
-    vector<int> buffer;
-    buffer.push_back(0);
-    buffer.push_back(0);
-    buffer.push_back(0);
-    buffer.push_back(0);
-
-    //int * packet = &buffer[0];
-
     int packet[MAX_UDP_PAYLOAD];
+    for(int i = 0; i < MAX_UDP_PAYLOAD; i++)
+        packet[i] = 0;
 
     cout << "Acting as receiver " << endl;
 
@@ -471,9 +465,8 @@ void nagelsSender()
 
     vector<int> packet1;
     vector<int> packet2;
-    int* sender;
-    vector<int> *buffer;
 
+    int acks[MAX_UDP_PAYLOAD];
 
     bool packet1Sending;
 
@@ -488,33 +481,31 @@ void nagelsSender()
 
 
     //create the initial packet
-    packet1.push_back(10);//seqNum);
-    packet1.push_back(11);//SYN);
-    packet1.push_back(12);//len);
+    packet1.push_back(seqNum);
+    packet1.push_back(SYN);
+    packet1.push_back(len);
     packet1.push_back(1);
 
+    packet2.push_back(seqNum);
+    packet2.push_back(SYN);
+    packet2.push_back(len);
+    packet2.push_back(1);
 
-    sender = &packet1[0];
-    buffer = &packet1;
 
-    cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
-    cout << "\t\tb(SeqNumIndex) = " << buffer->at(SeqNumIndex) << "; b(FlagIndex) = " << buffer->at(FlagIndex) <<"; b(LenIndex) = " << buffer->at(LenIndex) << endl;
 
+    cout << "\t\tp1[SeqNumIndex] = " << packet1[SeqNumIndex] << "; p1[FlagIndex] = " << packet1[FlagIndex] <<"; p1[LenIndex] = " << packet1[LenIndex] << endl;
+    cout << "\t\tp2[SeqNumIndex] = " << packet2[SeqNumIndex] << "; p2[FlagIndex] = " << packet2[FlagIndex] <<"; p2[LenIndex] = " << packet2[LenIndex] << endl;
+    cout << sizeof(&packet1) <<endl;
+    cout << sizeof(&packet2) << endl;
 
     packet1Sending = true;
-    sock.sendTo((char*)sender, sizeof(&sender));
+
+    sock.sendTo((char*)&packet1[0], sizeof(&packet1));//sizeof(int)* 3);
     //sock.sendTo((char*)buffer, sizeof(&buffer));
 
 
     return;
 
-    buffer = &packet2;
-
-    buffer->push_back(seqNum + len);
-    buffer->push_back(SYN);
-    buffer->push_back(len);
-
-    int number;
 
     while (seqNum < MAX_PACKETS)
     {
@@ -524,14 +515,20 @@ void nagelsSender()
             usleep(100);
             if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD && len + seqNum < MAX_PACKETS)
             {
+                if(packet1Sending)
+                    packet1.push_back(-10+rand()*(10));
+                else
+                    packet2.push_back(-10+rand()*(10));
 
-                buffer->push_back(-10+rand()*(10));
                 len++;
-
             }
             else
             {
-                buffer->at(LenIndex) = len;
+                if(packet1Sending)
+                    packet1.at(LenIndex) = len;
+                else
+                    packet2.at(LenIndex) = len;
+
                 cout << "len = " << len << endl;
             }
 
@@ -542,43 +539,45 @@ void nagelsSender()
             }
         }
 
-        cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
         cout << "\t\tp1[SeqNumIndex] = " << packet1[SeqNumIndex] << "; p1[FlagIndex] = " << packet1[FlagIndex] <<"; p1[LenIndex] = " << packet1[LenIndex] << endl;
         cout << "\t\tp2[SeqNumIndex] = " << packet2[SeqNumIndex] << "; p2[FlagIndex] = " << packet2[FlagIndex] <<"; p2[LenIndex] = " << packet2[LenIndex] << endl;
 
         if(ackTimedOut)
         {
-            sock.sendTo((char*)sender, sizeof(&sender));
+            if(packet1Sending)
+                sock.sendTo((char*)&packet1[0], sizeof(&packet1));
+            else
+                sock.sendTo((char*)&packet2[0], sizeof(&packet2));
+
             continue;
         }
 
 
-        sock.recvFrom((char*)sender, sizeof(&sender));
+        sock.recvFrom((char*)acks, sizeof(&acks));
 
-        if(sender[SeqNumIndex] > seqNum)
+
+        if(acks[SeqNumIndex] > seqNum)
         {
-            seqNum = sender[seqNum];
+            seqNum = acks[seqNum];
 
-            cout << "\t\ts[SeqNumIndex] = " << sender[SeqNumIndex] << "; s[FlagIndex] = " << sender[FlagIndex] <<"; s[LenIndex] = " << sender[LenIndex] << endl;
+            cout << "\t\ts[SeqNumIndex] = " << acks[SeqNumIndex] << "; s[FlagIndex] = " << acks[FlagIndex] <<"; s[LenIndex] = " << acks[LenIndex] << endl;
 
             cout << "\tnew seqNum = " << seqNum << endl;
 
 
             if(packet1Sending)
             {
-                sender = &packet2[0];
-                buffer = &packet1;
                 packet1Sending = false;
+                sock.sendTo((char*)&packet2[0], sizeof(&packet2));
             }
             else
             {
-                sender = &packet1[0];
-                buffer = &packet2;
                 packet1Sending = true;
+                sock.sendTo((char*)&packet1[0], sizeof(&packet1));
             }
 
 
-            sock.sendTo((char*)sender, sizeof(&sender));
+
         }
     }
 }
