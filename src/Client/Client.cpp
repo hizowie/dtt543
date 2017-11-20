@@ -384,7 +384,7 @@ void nagelsReceiver()
     cout << "Acting as receiver " << endl;
 
 
-    while(true) //attemptCount > 0)
+    while(seqNum < MAX_PACKETS)
     {
 
         stopwatch.start();
@@ -436,8 +436,8 @@ void nagelsSender()
 {
     UdpSocket sock(port);
     Timer stopwatch;
-    int sendTimeout = 10000000; //timeout in microseconds
-    int recTimeout = 12500000;
+    int sendTimeout = 1000; //timeout in microseconds
+    int recTimeout = 1250;
 
     bool ackTimedOut = false;
     bool isConnected = false;
