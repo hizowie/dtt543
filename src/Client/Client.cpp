@@ -375,7 +375,7 @@ void nagelsReceiver()
 {
     UdpSocket sock(port);
     Timer stopwatch;
-    int timeoutLength = 15000000; //timeout in microseconds
+    int timeoutLength = 150; //timeout in microseconds
     bool ackTimedOut = false;
     bool isConnected = false;
     int seqNum = 0;
@@ -437,8 +437,8 @@ void nagelsSender()
 {
     UdpSocket sock(port);
     Timer stopwatch;
-    int sendTimeout = 1000; //timeout in microseconds
-    int recTimeout = 1250;
+    int sendTimeout = 10; //timeout in microseconds
+    int recTimeout = 12;
 
     bool ackTimedOut = false;
     bool isConnected = false;
@@ -513,7 +513,7 @@ void nagelsSender()
 
             cout << "\tp[SeqNumIndex] = " << p[SeqNumIndex] << " ; p[FlagIndex] =" << p[FlagIndex] << "]; p[LenIndex] =" << p[LenIndex] << endl;
 
-            cout << "\tnew seqNum = " << seqNum;
+            cout << "\tnew seqNum = " << seqNum << endl;
 
             if(packet1Sending)
                 p = &packet2[0];
