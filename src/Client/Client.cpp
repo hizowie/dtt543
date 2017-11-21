@@ -368,9 +368,22 @@ void threewayHandshake(int packet[])
     }
 }
 
+void nagelsReceiver(int packet[])
+{
 
 
 
+
+}
+
+void nagelsSender(int packet[])
+{
+
+
+
+}
+
+/*
 void nagelsReceiver(int packet[])
 {
     UdpSocket sock(port);
@@ -599,7 +612,7 @@ return;
         }
     }
 }
-
+*/
 
 
 void udpDelayedAck()
