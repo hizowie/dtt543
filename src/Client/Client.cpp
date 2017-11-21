@@ -383,7 +383,7 @@ void nagelsReceiver(int packet[])
 
 
     for(int i = 0; i < MAX_UDP_PAYLOAD; i++)
-        packet[i] = 0;
+        packet[i] = -1;
 
     cout << "Acting as receiver " << endl;
 
@@ -412,13 +412,13 @@ void nagelsReceiver(int packet[])
                 //printPacketStats (packet, seqNum);
 
 
-            sock.ackTo((char*)packet, sizeof(&packet));
+            sock.ackTo((char*)packet, MAX_UDP_PAYLOAD * sizeof(int));
 
             ackTimedOut = false;
             continue;
         }
 
-        sock.recvFrom((char*)packet, sizeof(&packet));
+        sock.recvFrom((char*)packet, MAX_UDP_PAYLOAD * sizeof(int));
         isConnected = true;
 
         cout << "\t\tseqNum = " << seqNum << endl;
@@ -444,10 +444,11 @@ void nagelsReceiver(int packet[])
             packet[SeqNumIndex] = seqNum;
             packet[FlagIndex] = ACK;
 
-            sock.ackTo((char*)packet, sizeof(&packet));
+            sock.ackTo((char*)packet, MAX_UDP_PAYLOAD * sizeof(int));
         }
     }
 }
+
 
 
 
@@ -460,11 +461,12 @@ void nagelsSender(int packet[])
 
     bool ackTimedOut = false;
     bool isConnected = false;
+    bool packet1Sending;
+    
+    
     int seqNum = 0;
-    int len = 1;
+    int len = 0;
 
-    //vector<int> packet1;
-    //vector<int> packet2;
 
     int buf1[MAX_UDP_PAYLOAD];
     int buf2[MAX_UDP_PAYLOAD];
@@ -478,7 +480,7 @@ void nagelsSender(int packet[])
     }
 
 
-    bool packet1Sending;
+
 
     cout << "Acting as sender" << endl;
 
@@ -494,12 +496,12 @@ void nagelsSender(int packet[])
     buf1[SeqNumIndex] = seqNum;
     buf1[FlagIndex] = SYN;
     buf1[LenIndex] = len;
-    buf1[LenIndex+ 1] = -10+rand()*(10);
+    buf1[LenIndex + 1] = -10+rand()*(10);
 
     buf2[SeqNumIndex] = seqNum;
     buf2[FlagIndex] = SYN;
     buf2[LenIndex] = len;
-    buf2[LenIndex+ 1] = -10+rand()*(10);
+    buf2[LenIndex + 1] = -10+rand()*(10);
 
 
 
@@ -524,18 +526,18 @@ void nagelsSender(int packet[])
             if(stopwatch.lap() < sendTimeout && len < MAX_UDP_PAYLOAD && len + seqNum < MAX_PACKETS)
             {
                 if(packet1Sending)
-                    buf1[len+1] = -10+rand()*(10);
+                    buf2[len+1] = -10+rand()*(10);
                 else
-                    buf2[len+1] =-10+rand()*(10);
+                    buf1[len+1] =-10+rand()*(10);
 
                 len++;
             }
             else
             {
                 if(packet1Sending)
-                    buf1[LenIndex] = len;
-                else
                     buf2[LenIndex] = len;
+                else
+                    buf1[LenIndex] = len;
 
                 cout << "len = " << len << endl;
             }
@@ -553,10 +555,13 @@ void nagelsSender(int packet[])
         if(ackTimedOut)
         {
             if(packet1Sending)
-                sock.sendTo((char*)&buf1[0], sizeof(&buf1));
+            {
+                sock.sendTo((char*)&buf1, MAX_UDP_PAYLOAD * sizeof(int));
+            }
             else
-                sock.sendTo((char*)&buf2[0], sizeof(&buf2));
-
+            {
+                sock.sendTo((char*)&buf2, MAX_UDP_PAYLOAD * sizeof(int)));
+            }
             continue;
         }
 
@@ -576,12 +581,12 @@ void nagelsSender(int packet[])
             if(packet1Sending)
             {
                 packet1Sending = false;
-                sock.sendTo((char*)&buf2[0], sizeof(&buf2));
+                sock.sendTo((char*)&buf2, MAX_UDP_PAYLOAD * sizeof(int));
             }
             else
             {
                 packet1Sending = true;
-                sock.sendTo((char*)&buf1[0], sizeof(&buf1));
+                sock.sendTo((char*)&buf1, MAX_UDP_PAYLOAD * sizeof(int));
             }
 
 
