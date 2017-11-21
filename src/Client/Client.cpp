@@ -432,7 +432,7 @@ void nagelsReceiver(int packet[])
 
 
 
-
+        return;
 
 
 
@@ -552,6 +552,8 @@ void nagelsSender(int packet[])
         cout << "\t\tp1[SeqNumIndex] = " << buf1[SeqNumIndex] << "; p1[FlagIndex] = " << buf1[FlagIndex] <<"; p1[LenIndex] = " << buf1[LenIndex] << endl;
         cout << "\t\tp2[SeqNumIndex] = " << buf2[SeqNumIndex] << "; p2[FlagIndex] = " << buf2[FlagIndex] <<"; p2[LenIndex] = " << buf2[LenIndex] << endl;
 
+        return;
+
         if(ackTimedOut)
         {
             if(packet1Sending)
@@ -560,7 +562,7 @@ void nagelsSender(int packet[])
             }
             else
             {
-                sock.sendTo((char*)&buf2, MAX_UDP_PAYLOAD * sizeof(int)));
+                sock.sendTo((char*)&buf2, MAX_UDP_PAYLOAD * sizeof(int));
             }
             continue;
         }
