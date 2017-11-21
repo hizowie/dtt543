@@ -484,10 +484,13 @@ void nagelsSender(int packet[])
 
     cout << "Acting as sender" << endl;
 
+    cout << "What" << endl;
+
     if(!sock.setDestAddress(destAddress))
     {
+
         //set the destination address
-        cout << "!sock.setDestAddress(" << destAddress << ")" << endl;
+        cerr << "!sock.setDestAddress(" << destAddress << ")" << endl;
         return;
     }
 
@@ -512,9 +515,9 @@ void nagelsSender(int packet[])
 
     packet1Sending = true;
 
-    sock.sendTo((char*)&buf1, sizeof(&buf1));
+    sock.sendTo((char*)&buf1, MAX_UDP_PAYLOAD * sizeof(int));
 
-
+return;
 
 
     while (seqNum < MAX_PACKETS)
