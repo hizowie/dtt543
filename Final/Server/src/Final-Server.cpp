@@ -7,9 +7,44 @@
 //============================================================================
 
 #include <iostream>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "TCPSocket.h"
+
+
+#include <cstdlib>
+
+
+
+extern "C"
+{
+    #include <sys/types.h>    // for sockets
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+
+    #include <netdb.h>        // for gethostbyname( )
+    #include <unistd.h>       // for close( )
+    #include <string.h>       // for bzero( )
+
+    #include <sys/poll.h>     // for poll( )
+}
+
+
 using namespace std;
 
-int main() {
-	cout << "" << endl; // prints 
-	return 0;
+int createSocket(int port);
+
+int main()
+{
+    TCPSocket socket;
+    socket.connectSocket(50029);
+
+
+
 }
+
+
+
+

@@ -6,10 +6,26 @@
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
+//#include <boost/archive/binary_oarchive.hpp>
+//#include <boost/archive/binary_iarchive.hpp>
+
+
 #include <iostream>
+#include "TCPSocket.h"
 using namespace std;
 
-int main() {
-	cout << "" << endl; // prints 
-	return 0;
+int main()
+{
+
+    //welcome the user
+
+    //establish a connection
+
+    TCPSocket socket;
+    socket.connectSocket(50029, "uw1-320-11.uwb.edu");
+
+
+
+
+
 }

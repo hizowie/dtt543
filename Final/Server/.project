@@ -24,4 +24,10 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>LINKED_SRC</name>
+			<value>file:/home/anon/git/dtt543/Final/Library/src</value>
+		</variable>
+	</variableList>
 </projectDescription>
