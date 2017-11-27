@@ -2,7 +2,7 @@
 // Name        : Final-Server.cpp
 // Author      : Howie Catlin
 // Version     :
-// Copyright   : 
+// Copyright   :
 // Description : Hello World in C++, Ansi-style
 //============================================================================
 
@@ -40,6 +40,8 @@ int main()
 {
     TCPSocket socket;
     socket.connectSocket(50029);
+
+    //socket ->connectSocket(50029);
 
 
 

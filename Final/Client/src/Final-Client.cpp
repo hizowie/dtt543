@@ -22,10 +22,6 @@ int main()
     //establish a connection
 
     TCPSocket socket;
-    socket.connectSocket(50029, "uw1-320-11.uwb.edu");
-
-
-
-
+    socket.connectSocket(50029, "localhost");//"uw1-320-11.uwb.edu");
 
 }

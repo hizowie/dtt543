@@ -46,6 +46,8 @@ class TCPSocket
         int* getClientSD();
 
     private:
+        bool DEBUG;
+
         bool isServer;
 
         int enabled;
