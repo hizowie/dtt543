@@ -8,45 +8,44 @@
 
 #include <iostream>
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "TCPSocket.h"
 
 
-#include <cstdlib>
 
-
-
-extern "C"
-{
-    #include <sys/types.h>    // for sockets
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-
-    #include <netdb.h>        // for gethostbyname( )
-    #include <unistd.h>       // for close( )
-    #include <string.h>       // for bzero( )
-
-    #include <sys/poll.h>     // for poll( )
-}
 
 
 using namespace std;
 
-int createSocket(int port);
+#define DEBUG true
 
-int main()
+void printArgs(int argc, char* argv[]);
+
+
+int main(int argc, char* argv[])
 {
+    if(DEBUG)
+        printArgs(argc, argv);
+
+
     TCPSocket socket;
     socket.connectSocket(50029);
 
     //socket ->connectSocket(50029);
 
 
-
+    return 1;
 }
 
 
+
+void printArgs(int argc, char* argv[])
+{
+    cout << "Main arguments count: " << argc << endl;
+
+    for(int i = 0; i < argc; i++)
+        cout << "\targv[" << i << "]: " << argv[i] << endl;
+
+    cout << endl;
+}
 
 

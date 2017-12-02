@@ -32,7 +32,52 @@ extern "C"
 #define SD_UNDEFINED -2
 #define MAX_CONNECTIONS 5
 
+class TCPSocket
+{
+    public:
+        TCPSocket();
+        ~TCPSocket();
+        bool connectSocket(const int port);
+        bool connectSocket(const int port, const char* server);
 
+    protected:
+        int getSocketDescriptor();
+        int* getClientSD();
+
+    private:
+        bool DEBUG;
+
+        bool isServer;
+
+        int enabled;
+        int sd;
+        int remoteSD;
+        //int nextRemote;
+
+        struct sockaddr_in localAddr;
+        struct sockaddr_in remoteAddr;
+        struct sockaddr srcAddr;
+        socklen_t remoteLen;
+
+        bool isFull();
+        bool openSocket();
+        bool bindSocket(int port);
+        bool listenSocket();
+        bool acceptSocket();
+        bool sendTo(char msg[], int len);
+        bool recvFrom(char msg[], int len);
+        bool pollRecvFrom();
+        bool ackTo(char msg[], int len);
+
+
+
+
+
+
+
+};
+
+/*
 class TCPSocket
 {
     public:
@@ -65,6 +110,6 @@ class TCPSocket
         bool listenSocket();
         bool acceptSocket();
 };
-
+*/
 
 #endif /* SRC_TCPSOCKET_H_ */

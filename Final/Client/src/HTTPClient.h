@@ -12,11 +12,13 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 
 #include <cstdlib>
 #include <ctype.h>
 #include <sys/time.h>
 #include <vector>
+#include "md5.h"
 
 
 using namespace std;
@@ -31,12 +33,13 @@ extern "C"
     #include <unistd.h>       // for close( )
     #include <string.h>       // for bzero( )
     #include <sys/poll.h>     // for poll( )
+
 }
 
 #define SD_UNDEFINED -2
 #define MAX_CONNECTIONS 5
 
-enum REQUEST { GET, HEAD, OPTIONS,POST, PUT, DELETE, TRACE, CONNECT, NONE };
+enum REQUEST { GET, HEAD, OPTIONS,POST, PUT, DELETE, TRACE, CONNECT, PATCH, NONE };
 
 class HTTPClient
 {
@@ -44,75 +47,83 @@ class HTTPClient
         HTTPClient();
         ~HTTPClient();
 
-        bool connectSocket(const char* server);//, const int port, );
-        bool connectSocket(const string server);//, const int port, );
-        const char* createGETRequest(const string url);
-        const char* createGETRequest(const char* url);
-        bool sendRequest(const char * msg);
-        bool sendRequest(string msg);
-        bool recV();
 
-        //string readHTML();
-        string receiveReply();
+        bool submitRequest(REQUEST req);
 
-        void readHTML();//const char* URL, long &bytesReturnedOut, char* headerOut[]);
-        //char* readHTML(string URL, long &bytesReturnedOut, char* headerOut[]);
-
-        //long bytesReturned;
-        char* replyHeader[];
-        char* replyBody[];
-
-
-        void printHTML();
+        void printBody();
         void printHeader();
-        void getAddress();
+        void printResponse();
+
+
         void setServerName(string name);
         void setFilePath(string path);
-        REQUEST currReq;
+
+        void saveResponse();
 
     private:
+        //debug stuff
         bool DEBUG;
         int debugIndentLength;
         string getDebugIndent();
         string dIndent;
 
+        //socket stuff
         int enabled;
         int sd;
-        //char buffer[1024];
-
-
-
-        string servername;
-        string filepath;
-        string filename;
-
         struct sockaddr_in serverAddr;
         socklen_t serverLen;
 
+        //request stuff
+        REQUEST currReq;
+        string servername;
+        string filepath;
+        string filename;
+        string request;
+        size_t requestLen;
+        vector<string> parameters;
+        vector<string> pvalues;
+        string reqContent;
+
+
+        //response stuff
+        long headerLength;
+        long bodyLength;
+        string responseHeader;
+        string responseBody;
+
+
+
+        //request methods
+        bool sendRequest();
+        void getAddress();
 
         void parseURL(string URL);
         void parseURL(const char* URL);
 
-        int getHeaderLength(string content);
-        int getHeaderLength(char* content);
-
-        bool pollRecvFrom();
-
+        bool connectSocket();
 
         bool buildRequest();
 
-        char* request;
 
-        vector<string> parameters;
-        vector<string> pvalues;
+        void getPutParameters();
+        void buildPutContent();
+
 
         void getPostParameters();
         void buildPostContent();
-        string postContent;
 
-        void getPutContent();
-        void buildPutContent();
-        string putContent;
+
+        long getHeaderLength(string content);
+        long getHeaderLength(char* content);
+
+
+        bool getResponse();
+
+        bool pollRecvFrom();
+        void reset();
+
+        string IntToString(int number);
+
 
 
 
@@ -121,81 +132,4 @@ class HTTPClient
 
 #endif /* SRC_HTTPCLIENT_H_ */
 
-
-
-
-
-
-
-
-
-
-
-/*
-
-
-
-
-    totalBytesRead = 0;
-    while(1)
-    {
-        memset(readBuffer, 0, bufSize);
-        thisReadSize = recv (conn, readBuffer, bufSize, 0);
-
-        if ( thisReadSize <= 0 )
-            break;
-
-        tmpResult = (char*)realloc(tmpResult, thisReadSize+totalBytesRead);
-
-        memcpy(tmpResult+totalBytesRead, readBuffer, thisReadSize);
-        totalBytesRead += thisReadSize;
-    }
-
-    headerLen = getHeaderLength(tmpResult);
-    long contenLen = totalBytesRead-headerLen;
-    result = new char[contenLen+1];
-    memcpy(result, tmpResult+headerLen, contenLen);
-    result[contenLen] = 0x0;
-    char *myTmp;
-
-    myTmp = new char[headerLen+1];
-    strncpy(myTmp, tmpResult, headerLen);
-    myTmp[headerLen] = NULL;
-    delete(tmpResult);
-    *headerOut = myTmp;
-
-    bytesReturnedOut = contenLen;
-    closesocket(conn);
-    return(result);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-*/
 
