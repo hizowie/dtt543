@@ -1,3 +1,11 @@
+//============================================================================
+// Name        : HW1-Client.cpp
+// Author      : Howie Catlin
+// Version     :
+// Copyright   : 
+// Description : Hello World in C++, Ansi-style
+//============================================================================
+
 /*
  * temp.cpp
  *
@@ -39,9 +47,14 @@ string error_MainArgs = "The provided arguments failed. The expected args are:\n
                          "\t3 : Single-transfer (dump)\n";
 
 
+
+
+int sd;
 void writeMulti(int sd, char *databuf[], int nbufs, int bufsize);
 void writeV(int sd, char* databuf[], int nbufs, int bufsize);
 void writeSingle(int sd, char* databuf[], int nbufs, int bufsize);
+
+
 void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps, int * lastAck, int transferType);
 
 
@@ -99,6 +112,32 @@ int main(int argc, char* argv[])
 
 
 
+    int sd;
+    const int enable = 1;
+    struct sockaddr_in myAddr;
+
+    struct hostent *destination;
+    char data[256];
+
+    // Open a TCP socket
+    if(( sd = socket( AF_INET, SOCK_STREAM, 0 )) < 0)
+    {
+        cerr << "Cannot open a TCP socket." << endl;
+    }
+
+    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*)&enable, sizeof(int));
+
+    destination = gethostbyname(serverIP);
+
+    bzero((char*)&myAddr, sizeof(myAddr));
+    myAddr.sin_family = AF_INET;
+    bcopy((char*)destination->h_addr, (char*)&myAddr.sin_addr.s_addr, destination->h_length);
+    myAddr.sin_port = htons(atoi(port));
+    if(connect(sd, (struct sockaddr*)&myAddr, sizeof(myAddr))< 0)
+    {
+        cerr << "Failed to create TCP connection " << endl;
+    }
+
     //local variables
     //int port = YOUR_ID;         //the last 5 digits of your student id
     //sockaddr_in sendSockAddr;
@@ -118,8 +157,10 @@ int main(int argc, char* argv[])
     //retrieve a hostent struct to this ip by calling gethostname
     //struct hostent * host;
 
+    /*
 
      //get the host info
+
      int cliendSd;
      struct addrinfo hints, *servinfo, *p;
      int rv;
@@ -167,7 +208,7 @@ int main(int argc, char* argv[])
 
      //release the address object
      freeaddrinfo(servinfo);
-
+     */
 
 
 
@@ -184,15 +225,15 @@ int main(int argc, char* argv[])
     {
         if(transferType == 1)
         {
-            writeMulti(cliendSd, (char**)&databuf, nbufs, bufsize);
+            writeMulti(sd, (char**)&databuf, nbufs, bufsize);
         }
         else if(transferType == 2)
         {
-            writeV(cliendSd, (char**) &databuf, nbufs, bufsize);
+            writeV(sd, (char**) &databuf, nbufs, bufsize);
         }
         else
         {
-            writeSingle(cliendSd, (char**) databuf, nbufs, bufsize);
+            writeSingle(sd, (char**) databuf, nbufs, bufsize);
         }
 
         //lap the timer by calling gettimeofday() where lap-start = data-sending time
@@ -202,7 +243,7 @@ int main(int argc, char* argv[])
 
 
     //receive from the server an integer acknowledgement that shows how many times the server called read()
-    read(cliendSd, &ack, sizeof(int));
+    read(sd, &ack, sizeof(int));
 
 
     //stop the timer by calling gettimeofday() where stop-start = round-trip time
@@ -215,9 +256,10 @@ int main(int argc, char* argv[])
 
 
     //close the socket
-    close(cliendSd);
+    close(sd);
 
 }
+
 
 void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps, int * lastAck, int transferType)
 {
@@ -252,6 +294,8 @@ void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps,
 }
 
 
+
+
 void writeMulti(int sd, char * databuf[], int nbufs, int bufsize)
 {
     for(int j = 0; j < nbufs; j++)
@@ -272,7 +316,10 @@ void writeV(int sd, char* databuf[], int nbufs, int bufsize)
     writev(sd, vector, nbufs);
 }
 
+
 void writeSingle(int sd, char* databuf[], int nbufs, int bufsize)
 {
     write(sd, databuf, nbufs*bufsize);
 }
+
+

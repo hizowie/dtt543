@@ -1,9 +1,11 @@
-/*
- * temp2.cpp
- *
- *  Created on: Oct 16, 2017
- *      Author: anon
- */
+//============================================================================
+// Name        : HW1-Server.cpp
+// Author      : Howie Catlin
+// Version     :
+// Copyright   : 
+// Description : Hello World in C++, Ansi-style
+//============================================================================
+
 #include <sys/types.h>      //socket, bind
 #include <sys/socket.h>     //socket, bind, listen, inet_ntoa
 #include <netinet/in.h>     //hton, htons, inet_ntoa
@@ -25,55 +27,73 @@
 using namespace std;
 
 
-#define BUFSIZE 1500
-
 
 
 
 void readData(int repetitions);
 
+#define BUFSIZE 1500
 
-int serverSd;
+
+
 int repetitions;
+int newSD;
 
 int main(int argc, char* argv[])
 {
+
+    if(argc < 3)
+    {
+        cout << "Must provide at least 2 arguments: [port] and [repetitions]" << endl;
+        return 0;
+    }
+
     int port =     atoi(argv[1]);
     repetitions =  atoi(argv[2]);
 
-    //accept a connection
-    sockaddr_in acceptSockAddr;
-    bzero((char*)&acceptSockAddr, sizeof(acceptSockAddr));
-    acceptSockAddr.sin_family = AF_INET; //address family : internet
-    acceptSockAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    acceptSockAddr.sin_port = htons(port);
 
-    //open a stream-oriented socket with internet address family
-    serverSd = socket(AF_INET, SOCK_STREAM, 0);
+    int sd;
+    socklen_t destSockLen;
+    const int enable = 1;
 
-    //set the SO_REUSEADDR option
-    const int on = 1;
-    setsockopt(serverSd, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(int));
-
-    //bind the socket to local address w/ descriptor, address, & data size
-    bind(serverSd, (sockaddr*)&acceptSockAddr, sizeof(acceptSockAddr));
-
-    //instruct OS to listen up to 5 connection requests from client
-    listen(serverSd, 5);
+    struct sockaddr_in myAddr;
+    struct sockaddr_in destAddr;
 
 
 
-    //receive a request from client by calling accept
-    //sockaddr_in newSockAddr;
-    //socklen_t newSockAddrSize = sizeof(newSockAddr);
-    //int newSd = accept(serverSd, (sockaddr *)&newSockAddr, &newSockAddrSize);
+    if(( sd = socket( AF_INET, SOCK_STREAM, 0)) < 0 )
+    {
+          cerr << "Cannot open a TCP socket." << endl;
+    }
+
+    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*)&enable, sizeof(int));
+
+
+    // Bind our local address
+    myAddr.sin_addr.s_addr = INADDR_ANY;
+    myAddr.sin_port = htons(port);
+    myAddr.sin_family = AF_INET;
+    bzero((char*) &myAddr.sin_zero, sizeof(myAddr));
+
+
+
+    if(bind(sd, (struct sockaddr *) &myAddr, sizeof(myAddr)) < 0)
+    {
+        cerr << "Cannot bind while opening TCP socket "<< endl;
+    }
+
+
+    listen(sd, 5);
+    destSockLen = sizeof(destAddr);
+    newSD = accept(sd, (struct sockaddr *) &destAddr, &destSockLen);
 
 
 
     //change the socket into an asynchronous connection
     signal(SIGIO, readData);
-    fcntl(serverSd, F_SETOWN, getpid());
-    fcntl(serverSd, F_SETOWN, FASYNC);
+    fcntl(newSD, F_SETOWN, getpid());
+    fcntl(newSD, F_SETOWN, FASYNC);
+
 
     //let this server sleep forever
     while(true)
@@ -81,11 +101,7 @@ int main(int argc, char* argv[])
         sleep(1000);
     }
 
-
-
-
 }
-
 
 
 void readData(int repetitions)
@@ -110,19 +126,22 @@ void readData(int repetitions)
     for(int i = 0; i < repetitions; i++)
     {
         for(int nRead = 0;
-                (nRead += read(serverSd, databuf + nRead, BUFSIZE - nRead)) < BUFSIZE; ++count);
+                (nRead += read(newSD, databuf + nRead, BUFSIZE - nRead)) < BUFSIZE; ++count);
 
     }
 
     //use the write system call to send back a response to the client (user newSd, but not serverSd)
-    write(serverSd, &count, sizeof(count));
+    write(newSD, &count, sizeof(count));
     gettimeofday(&endTime, NULL);
 
     timediff = (endTime.tv_sec - startTime.tv_sec) +
                         (endTime.tv_usec - startTime.tv_usec)/1000000.0;
+
     fprintf(stdout, "\t\tTransfer time: %f milliseconds", timediff);
 
 
     //close the socket by calling close
-    close(serverSd);
+    //close(newSd);
 }
+
+
