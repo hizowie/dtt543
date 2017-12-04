@@ -1,0 +1,7 @@
+HTTP/1.1 405 Method Not Allowed
+Content-Length: 0
+Server: Microsoft-IIS/10.0
+X-MSEdge-Ref: Ref A: 2D287CF3FB50495892E03F9C6582EE08 Ref B: WSTEDGE0220 Ref C: 2017-12-04T03:06:19Z
+Date: Mon, 04 Dec 2017 03:06:18 GMT
+Connection: close
+

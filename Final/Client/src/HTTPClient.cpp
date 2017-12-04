@@ -76,24 +76,88 @@ void HTTPClient::saveResponse()
         return;
     }
 
-    if(this->headerLength != 0)
+    if(this->headerLength == 0)
     {
-        std::ofstream out("downloaded.file");
-
-        string fileData = this->responseHeader + "\r\n" + this->responseBody;
-
-        out << fileData;
-        out.close();
-
-
-        cout << "File data written to 'download.file'" << endl;
-        cout << "  MD5: " << md5(fileData) << endl << endl;
+        cout << "No valid response to save." << endl << endl;
+        return;
     }
+
+    bool isWebpage = false;
+
+
+    string::size_type n = this->filename.rfind('.');
+    if(n == string::npos)
+    {
+        string input;
+        cout << "Please enter file name to save the response under. " << endl;
+        cin >> input;
+
+
+       this->filename = input;
+    }
+
+    n = this->filename.rfind('.');
+    if(n == string::npos)
+    {
+        isWebpage = false;
+    }
+    else
+    {
+        string ext = this->filename.substr(n, this->filename.length() - n);
+
+        if(ext == "html" || ext == "htm")
+           isWebpage = true;
+        else
+           isWebpage = false;
+    }
+
+
+    std::ofstream out(this->filename.c_str());
+    string fileData = ""; //this->responseHeader + "\r\n" + this->responseBody;
+
+
+    switch(this->currReq)
+    {
+        case HEAD:
+        case OPTIONS:
+        case TRACE:
+        case CONNECT:
+            {
+                fileData = this->responseHeader;
+                break;
+            }
+        case GET:
+        case PATCH:
+        case POST:
+        case PUT:
+        case DELETE:
+        case NONE:
+        default:
+            {
+                if(isWebpage)
+                    fileData = this->responseBody;
+                else
+                    fileData = this->responseHeader + "\r\n" + this->responseBody;
+
+                break;
+            }
+    }
+
+    out << fileData;
+    out.close();
+
+
+    cout << "File data written to '" << this->filename << "'" << endl;
+    cout << "  MD5: " << md5(fileData) << endl << endl;
+
 }
+
 
 
 bool HTTPClient::submitRequest(REQUEST req)
 {
+    reset();
+
     bool result = false;
         switch(req)
         {
@@ -207,6 +271,7 @@ bool HTTPClient::submitRequest(REQUEST req)
                 break;
             }
             case NONE:
+            case SAVE:
                 default:
             {
                 cout << "Could not understand command. Please try again" << endl;
@@ -510,7 +575,7 @@ bool HTTPClient::buildRequest()
 
             command = "POST " + this->filepath + httpVersion + nextLine;
             contentType = "Content-Type: application/x-www-form-urlencoded" + nextLine;
-            contentLength = "Content-Length: " + IntToString(this->reqContent.length()) + nextLine + nextLine;
+            contentLength = "Content-Length: " + intToString(this->reqContent.length()) + nextLine + nextLine;
             content =  this->reqContent + nextLine;
             break;
         }
@@ -521,7 +586,7 @@ bool HTTPClient::buildRequest()
 
             command = "PUT " + this->filepath + httpVersion + nextLine;
             contentType = "Content-Type: application/x-www-form-urlencoded" + nextLine;
-            contentLength = "Content-Length: " + IntToString(this->reqContent.length()) + nextLine + nextLine;
+            contentLength = "Content-Length: " + intToString(this->reqContent.length()) + nextLine + nextLine;
             content =  this->reqContent + nextLine;
             break;
         }
@@ -670,18 +735,6 @@ void HTTPClient::buildPutContent()
 }
 
 
-bool HTTPClient::pollRecvFrom()
-{
-    struct pollfd pfd[1];
-    pfd[0].fd = this->sd;             // declare I'll check the data availability of sd
-    pfd[0].events = POLLRDNORM; // declare I'm interested in only reading from sd
-
-    // check it immediately and return a positive number if sd is readable,
-    // otherwise return 0 or a negative number
-    return poll( pfd, 1, 0 );
-}
-
-
 bool HTTPClient::getResponse()
 {
     const int bufSize = 2048;
@@ -697,11 +750,6 @@ bool HTTPClient::getResponse()
     while(true)
     {
         memset(readBuffer, 0, bufSize);
-
-        //while(!this->pollRecvFrom())
-        //{
-        //    usleep(10);
-        //}
 
         thisReadSize = recv (this->sd, readBuffer, bufSize, 0);
 
@@ -865,7 +913,7 @@ void HTTPClient::setFilePath(string path)
         this->filepath = "/" + path;
 }
 
-string HTTPClient::IntToString(int number)
+string HTTPClient::intToString(int number)
 {
     char cNumber[16];
     sprintf(cNumber, "%d", number);

@@ -39,7 +39,7 @@ extern "C"
 #define SD_UNDEFINED -2
 #define MAX_CONNECTIONS 5
 
-enum REQUEST { GET, HEAD, OPTIONS,POST, PUT, DELETE, TRACE, CONNECT, PATCH, NONE };
+enum REQUEST { GET, HEAD, OPTIONS,POST, PUT, DELETE, TRACE, CONNECT, PATCH, SAVE, NONE };
 
 class HTTPClient
 {
@@ -50,15 +50,16 @@ class HTTPClient
 
         bool submitRequest(REQUEST req);
 
+        void printResponse();
         void printBody();
         void printHeader();
-        void printResponse();
 
+        void saveResponse();
 
         void setServerName(string name);
         void setFilePath(string path);
 
-        void saveResponse();
+
 
     private:
         //debug stuff
@@ -119,10 +120,10 @@ class HTTPClient
 
         bool getResponse();
 
-        bool pollRecvFrom();
+
         void reset();
 
-        string IntToString(int number);
+        string intToString(int number);
 
 
 

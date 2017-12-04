@@ -66,9 +66,6 @@ int main(int argc, char* argv[])
     while(handleCommand(userCMD))
     {
         userCMD  = getCommand();
-
-        delete(client);
-        client = new HTTPClient();
     }
 
     delete(client);
@@ -165,48 +162,43 @@ bool handleCommand(string input)
     }
     else if(tmpInput.substr(0, 3) == "get")
     {
-        if(client->submitRequest(GET))
-            askToSave();
+        client->submitRequest(GET);
     }
     else if(tmpInput.substr(0, 4) == "head")
     {
-        if(client->submitRequest(HEAD))
-            askToSave();
+        client->submitRequest(HEAD);
     }
     else if(tmpInput.substr(0, 7) == "options")
     {
-        if(client->submitRequest(OPTIONS))
-            askToSave();
+        client->submitRequest(OPTIONS);
     }
     else if(tmpInput.substr(0, 5) == "patch")
     {
-        if(client->submitRequest(PATCH))
-            askToSave();
+        client->submitRequest(PATCH);
     }
     else if(tmpInput.substr(0, 3) == "put")
     {
-        if(client->submitRequest(PUT))
-            askToSave();
+        client->submitRequest(PUT);
     }
     else if(tmpInput.substr(0, 4) == "post")
     {
-        if(client->submitRequest(POST))
-            askToSave();
+        client->submitRequest(POST);
     }
     else if(tmpInput.substr(0, 6) == "delete")
     {
-        if(client->submitRequest(DELETE))
-            askToSave();
+        client->submitRequest(DELETE);
     }
     else if(tmpInput.substr(0, 5) == "trace")
     {
-        if(client->submitRequest(TRACE))
-            askToSave();
+        client->submitRequest(TRACE);
     }
     else if(tmpInput.substr(0, 7) == "connect")
     {
-        if(client->submitRequest(CONNECT))
-            askToSave();
+        client->submitRequest(CONNECT);
+    }
+    else if(tmpInput.substr(0, 4) == "save")
+    {
+        client->saveResponse();
     }
 
     else
@@ -238,32 +230,6 @@ void printCommands()
 
 };
 
-void askToSave()
-{
-    cout << "Would you like to save the server response? [y\\n]" << endl;
-
-    string input;
-
-    cin >> input;
-
-    input[0] = tolower(input[0]);
-
-    while(input[0] != 'n')
-    {
-        if(input[0] != 'y')
-        {
-            cout << "could not understand your response." << endl;
-            cout << "Would you like to save the server response? [y\\n]" << endl;
-            cin >> input;
-
-            input[0] = tolower(input[0]);
-            continue;
-        }
-
-        client->saveResponse();
-        return;
-    }
-}
 
 void handleHELP(string input)
 {
@@ -306,28 +272,37 @@ void handleHELP(string input)
     else if(input.substr(0, 4) == "head")
     {
         cout << "\tThe HEAD command guides you through issuing a 'HEAD' request" << endl;
-        cout << "\tto the URL of your choosing. This request returns only the " << endl;
+        cout << "\tto the URL of your choosing. This request returns the page " << endl;
         cout << "\tmetadata only." << endl << endl;
         return;
     }
     else if(input.substr(0, 7) == "options")
     {
-        cout << "\tThe command guides you through issuing a 'OPTIONS' request " << endl;
+        cout << "\tThe 'options' command guides you through issuing a 'OPTIONS' request " << endl;
         cout << "\tto a URL of your choosing. This request returns the page " << endl;
         cout << "\tmetadata only." << endl << endl;
         return;
     }
     else if(input.substr(0, 3) == "patch")
     {
-        cout << "\tThe command guides you through issuing a 'PATCH' request," << endl;
+        cout << "\tThe 'patch' command guides you through issuing a 'PATCH' request," << endl;
         cout << "\tto a URL of your choosing. This request returns the page " << endl;
         cout << "\tmetadata and body." << endl << endl;
         return;
     }
     else if(input.substr(0, 3) == "put")
     {
-        cout << "\tThe command guides you through issuing a 'PUT' request," << endl;
+        cout << "\tThe 'put' command guides you through issuing a 'PUT' request," << endl;
         cout << "\tincluding asking for a string to write to the webpage." << endl;
+        cout << "\tDue to the need to submit information to the page, this " << endl;
+        cout << "\trequest is being executed against httpbin.org for testing " << endl;
+        cout << "\tpurposes." << endl << endl;
+        return;
+    }
+    else if(input.substr(0, 4) == "post")
+    {
+        cout << "\tThe 'post' command guides you through issuing a 'POST' request," << endl;
+        cout << "\tincluding asking for a series of parameters and values to submit." << endl;
         cout << "\tDue to the need to submit information to the page, this " << endl;
         cout << "\trequest is being executed against httpbin.org for testing " << endl;
         cout << "\tpurposes." << endl << endl;
@@ -335,23 +310,32 @@ void handleHELP(string input)
     }
     else if(input.substr(0, 6) == "delete")
     {
-        cout << "\tThe command guides you through issuing a 'DELETE' request." << endl;
+        cout << "\tThe 'delete' command guides you through issuing a 'DELETE' request." << endl;
         cout << "\tDue to the need to run against a server, this request uses" << endl;
         cout << "\thttpbin.org for testing purposes." << endl << endl;
         return;
     }
     else if(input.substr(0, 5) == "trace")
     {
-        cout << "\tThe command guides you through issuing a 'TRACE' request " << endl;
-        cout << "\to a URL of your choosing. This request returns the page " << endl;
+        cout << "\tThe 'trace' command guides you through issuing a 'TRACE' request " << endl;
+        cout << "\tto a URL of your choosing. This request returns the page " << endl;
         cout << "\tmetadata only." << endl << endl;
         return;
     }
     else if(input.substr(0, 7) == "connect")
     {
-        cout << "\tThe command guides you through issuing a 'CONNECT' request " << endl;
+        cout << "\tThe 'connect' command guides you through issuing a 'CONNECT' request " << endl;
         cout << "\tto a URL of your choosing. This request returns the page " << endl;
         cout << "\tmetadata only." << endl << endl;
+        return;
+    }
+    else if(input.substr(0, 4) == "save")
+    {
+        cout << "\tThe 'save' command allows you to save a previous server response " << endl;
+        cout << "\tto file. A request must be made before the response can be saved, " << endl;
+        cout << "\tand the content of the response will depend on the request made. " << endl;
+        cout << "\tAn MD5 hash of the response content is printed to screen to ensure" << endl;
+        cout << "\tfile integrity. " << endl << endl;
         return;
     }
     else
