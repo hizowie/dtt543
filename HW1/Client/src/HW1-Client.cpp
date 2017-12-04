@@ -64,13 +64,13 @@ int main(int argc, char* argv[])
     //test if all expected input was provided
     if(argc != 7)
     {
-        cout << "argv[1] = " << argv[1] << "\n";
-        cout << "argv[2] = " << argv[2] << "\n";
-        cout << "argv[3] = " << argv[3] << "\n";
-        cout << "argv[4] = " << argv[4] << "\n";
-        cout << "argv[5] = " << argv[5] << "\n";
-        cout << "argv[6] = " << argv[6] << "\n";
-        cout << "argc = " << argc;
+        cout << "argv[1] = " << argv[1] << endl;
+        cout << "argv[2] = " << argv[2] << endl;
+        cout << "argv[3] = " << argv[3] << endl;
+        cout << "argv[4] = " << argv[4] << endl;
+        cout << "argv[5] = " << argv[5] << endl;
+        cout << "argv[6] = " << argv[6] << endl;
+        cout << "argc = " << argc << endl << endl;;
                //input is missing; complain and exit
         //fprintf(stderr, (char*)error_MainArgs.c_str());
         exit(1);
@@ -285,12 +285,12 @@ void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps,
          timediff = ((*it).tv_sec - (*(++it)).tv_sec) +
                      (((*it).tv_usec - (*(++it)).tv_usec)/1000000.0);
 
-         fprintf(stdout, "\t\tTransfer %d: %f milliseconds", counter, timediff);
+         fprintf(stdout, "\t\tTransfer %d: %f milliseconds\n", counter, timediff);
          counter++;
          timediff = -1.0;
     }
 
-    fprintf(stdout, "\tAck'd sends: %d", *lastAck);
+    fprintf(stdout, "\tAck'd sends: %d\n", *lastAck);
 }
 
 
