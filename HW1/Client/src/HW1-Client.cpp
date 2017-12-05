@@ -2,16 +2,9 @@
 // Name        : HW1-Client.cpp
 // Author      : Howie Catlin
 // Version     :
-// Copyright   : 
+// Copyright   :
 // Description : Hello World in C++, Ansi-style
 //============================================================================
-
-/*
- * temp.cpp
- *
- *  Created on: Oct 14, 2017
- *      Author: anon
- */
 
 
 
@@ -34,7 +27,11 @@
 #include <iostream>
 #include <strings.h>
 
+#include "TCPSocket.h"
+
+
 using namespace std;
+
 string error_MainArgs = "The provided arguments failed. The expected args are:\n"
                          "(int) port -\t\tServer IP Port\n"
                          "(int) repetitions -\tThe number of repetitions of sending a set of data buffers\n"
@@ -49,13 +46,16 @@ string error_MainArgs = "The provided arguments failed. The expected args are:\n
 
 
 
-int sd;
+
 void writeMulti(int sd, char *databuf[], int nbufs, int bufsize);
 void writeV(int sd, char* databuf[], int nbufs, int bufsize);
 void writeSingle(int sd, char* databuf[], int nbufs, int bufsize);
 
+long getTimespan(timeval startTime);
+long getTimespan(timeval startTime, timeval endTime);
 
-void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps, int * lastAck, int transferType);
+
+void printResults(long startTime, long endTime, int ack, int transferType);
 
 
 
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
     int repetitions  = *argv[2];
     int nbufs        = *argv[3];
     int bufsize      = *argv[4];
-    char *serverIP    = argv[5];
+    char *serverName =  argv[5];
     int transferType = *argv[6];
 
     //input sanitation
@@ -91,11 +91,11 @@ int main(int argc, char* argv[])
         bufsize = 1500 / nbufs;
     }
 
-    if(serverIP == NULL)
+    if(serverName == NULL)
     {
         //default to the local machine
-        serverIP = new char[256];
-        gethostname(serverIP, 256);
+    	serverName = new char[256];
+        gethostname(serverName, 256);
     }
 
     if(transferType < 1 || transferType > 3)
@@ -111,111 +111,28 @@ int main(int argc, char* argv[])
     }
 
 
-
-    int sd;
-    const int enable = 1;
-    struct sockaddr_in myAddr;
-
-    struct hostent *destination;
-    char data[256];
-
-    // Open a TCP socket
-    if(( sd = socket( AF_INET, SOCK_STREAM, 0 )) < 0)
-    {
-        cerr << "Cannot open a TCP socket." << endl;
-    }
-
-    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char*)&enable, sizeof(int));
-
-    destination = gethostbyname(serverIP);
-
-    bzero((char*)&myAddr, sizeof(myAddr));
-    myAddr.sin_family = AF_INET;
-    bcopy((char*)destination->h_addr, (char*)&myAddr.sin_addr.s_addr, destination->h_length);
-    myAddr.sin_port = htons(atoi(port));
-    if(connect(sd, (struct sockaddr*)&myAddr, sizeof(myAddr))< 0)
-    {
-        cerr << "Failed to create TCP connection " << endl;
-    }
-
-    //local variables
-    //int port = YOUR_ID;         //the last 5 digits of your student id
-    //sockaddr_in sendSockAddr;
-    //bzero((char*)&sendSockAddr, sizeof(sendSockAddr));
-    //sendSockAddr.sin_family = AF_INET;  //address family: internet
-    //sendSockAddr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr)*host->h_addr_list));
-    //sendSockAddr.sin_port = htons(port);
+    cout << "Port:\t\t\t" << port << endl;
+    cout << "Server Name:\t" << repetitions << endl;
+    cout << "Buffer count:\t" << repetitions << endl;
+    cout << "Buffer size:\t" << repetitions << endl;
+    cout << "Repetitions:\t" << repetitions << endl;
+    cout << "Test number:\t" << transferType << endl;
 
 
+    TCPSocket socket(port);
+    int sd = socket.connectClient(serverName);
 
-    //open socket and establish a connection to a server
 
     //allocate databuf[nbufs][bufsize], where nbufs * bufsize = 1500
     char databuf[nbufs][bufsize];
-    //char * d = &databuf;
 
-    //retrieve a hostent struct to this ip by calling gethostname
-    //struct hostent * host;
-
-    /*
-
-     //get the host info
-
-     int cliendSd;
-     struct addrinfo hints, *servinfo, *p;
-     int rv;
-
-     memset(&hints, 0, sizeof hints);
-     hints.ai_flags = AI_PASSIVE;
-     hints.ai_family = AF_UNSPEC;
-     hints.ai_socktype = SOCK_STREAM;
-
-     //attempt to get machine info
-     if((rv = getaddrinfo(serverIP, port, &hints, &servinfo)) != 0)
-     {
-         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-         exit(1);
-     }
-
-
-     //iterate over the matches that were found
-     for(p = servinfo; p != NULL; p = p->ai_next)
-     {
-         //check the sockets that were found
-         if((cliendSd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-         {
-             perror("socket");
-             continue;
-         }
-
-         //attempt to connect
-         if(connect(cliendSd, p->ai_addr, p->ai_addrlen) == -1)
-         {
-             perror("connect");
-             close(cliendSd);
-             continue;
-         }
-
-         break; //connected successfully
-     }
-
-     if(p == NULL)
-     {
-         //never managed to connect
-         fprintf(stderr, "failed to connect\n");
-         exit(2);
-     }
-
-     //release the address object
-     freeaddrinfo(servinfo);
-     */
 
 
 
     //start a timer by calling gettimeofday()
     struct timeval startTime, endTime, thisLap;
+    long lapTime, totalTime;
     int ack;
-    std::vector<timeval> laps;
     gettimeofday(&startTime, NULL);
 
 
@@ -235,64 +152,54 @@ int main(int argc, char* argv[])
         {
             writeSingle(sd, (char**) databuf, nbufs, bufsize);
         }
-
-        //lap the timer by calling gettimeofday() where lap-start = data-sending time
-        gettimeofday(&thisLap, NULL);
-        laps.push_back(thisLap);
     }
 
+    //lap the timer by calling gettimeofday() where lap-start = data-sending time
+    gettimeofday(&thisLap, NULL);
+    lapTime = getTimespan(startTime);
+
+    int count;
 
     //receive from the server an integer acknowledgement that shows how many times the server called read()
-    read(sd, &ack, sizeof(int));
+    read(sd, &count, sizeof(count));
+
 
 
     //stop the timer by calling gettimeofday() where stop-start = round-trip time
-    gettimeofday(&endTime, NULL);
+    totalTime = getTimespan(startTime);
 
 
     //print out the statistics, e.g.:
         //Test 1: data-sending time = xxx usec, round-trip time = yyy usec, #reads = zzz
-    printResults(startTime, endTime, laps, &ack, transferType);
+    printResults(lapTime, totalTime, ack, transferType);
 
 
     //close the socket
     close(sd);
 
+    return 0;
 }
 
 
-void printResults(timeval startTime, timeval endTime, std::vector<timeval> laps, int * lastAck, int transferType)
+//void printResults(long totalTime, int * lastAck, int transferType)
+void printResults(long lapTime, long totalTime, int ack, int transferType)
 {
-    double totalTime = (endTime.tv_sec - startTime.tv_sec) + ((endTime.tv_usec - startTime.tv_usec)/1000000.0);
-
     const char * header;
 
     if(transferType == 1)
-        header = "Test: Multi-write\t\tTotal time:\t%d";
+        header = "Test: Multi-write\t";
     else if(transferType == 2)
-        header = "Test: Writev\t\t\tTotal time:\t%d";
+        header = "Test: Writev\t\t";
     else
-        header = "Test: Single-write\t\tTotal time:\t%d";
-
-    fprintf(stdout, header, totalTime);
+        header = "Test: Single-write\t";
 
 
+    cout << header << endl;
+    cout << "\tData-sending time:\t" << lapTime << "usec "<< endl;
+    cout << "Round-trip time:\t" << totalTime << "usec " << endl;
+    cout << "# Reads: " << ack << endl;
 
-    double timediff;
-    int counter = 1;
-    for(std::vector<timeval>::iterator it = laps.begin(); ++it != laps.end(); ++it)
-    {
-         timediff = ((*it).tv_sec - (*(++it)).tv_sec) +
-                     (((*it).tv_usec - (*(++it)).tv_usec)/1000000.0);
-
-         fprintf(stdout, "\t\tTransfer %d: %f milliseconds\n", counter, timediff);
-         counter++;
-         timediff = -1.0;
-    }
-
-    fprintf(stdout, "\tAck'd sends: %d\n", *lastAck);
 }
-
 
 
 
@@ -323,3 +230,18 @@ void writeSingle(int sd, char* databuf[], int nbufs, int bufsize)
 }
 
 
+long getTimespan(timeval startTime)
+{
+	timeval endTime;
+	gettimeofday(&endTime, NULL);
+	return getTimespan(startTime, endTime);
+}
+
+
+long getTimespan(timeval startTime, timeval endTime)
+{
+    long diff;
+    diff = (endTime.tv_sec - startTime.tv_sec) * 1000000;
+    diff += (endTime.tv_usec - startTime.tv_usec);
+    return diff;
+}
