@@ -77,12 +77,12 @@ int main(int argc, char* argv[])
     }
 
     //inputs:
-    char *port =        argv[1];
-    int repetitions  = *argv[2];
-    int nbufs        = *argv[3];
-    int bufsize      = *argv[4];
+    int port =        atoi(argv[1]);
+    int repetitions  = atoi(argv[2]);
+    int nbufs        = atoi(argv[3]);
+    int bufsize      = atoi(argv[4]);
     char *serverName =  argv[5];
-    int transferType = *argv[6];
+    int transferType = atoi(argv[6]);
 
     //input sanitation
     if(nbufs * bufsize != 1500)
@@ -104,19 +104,19 @@ int main(int argc, char* argv[])
         transferType = 1;
     }
 
-    if(atoi(port) < 9999)
+    if(port < 9999)
     {
         //default to student number if given 4-digit port
-        port = "50029";
+        port = 50029;
     }
 
 
-    cout << "Port:\t\t\t" << port << endl;
-    cout << "Server Name:\t" << repetitions << endl;
-    cout << "Buffer count:\t" << repetitions << endl;
-    cout << "Buffer size:\t" << repetitions << endl;
+    cout << "Port:\t\t" << port << endl;
+    cout << "Server Name:\t" << serverName << endl;
+    cout << "Buffer count:\t" << nbufs << endl;
+    cout << "Buffer size:\t" << bufsize << endl;
     cout << "Repetitions:\t" << repetitions << endl;
-    cout << "Test number:\t" << transferType << endl;
+    cout << "Test number:\t" << transferType << endl << endl;
 
 
     TCPSocket socket(port);
@@ -126,13 +126,10 @@ int main(int argc, char* argv[])
     //allocate databuf[nbufs][bufsize], where nbufs * bufsize = 1500
     char databuf[nbufs][bufsize];
 
-
-
-
     //start a timer by calling gettimeofday()
-    struct timeval startTime, endTime, thisLap;
+    struct timeval startTime;
     long lapTime, totalTime;
-    int ack;
+
     gettimeofday(&startTime, NULL);
 
 
@@ -142,28 +139,35 @@ int main(int argc, char* argv[])
     {
         if(transferType == 1)
         {
-            writeMulti(sd, (char**)&databuf, nbufs, bufsize);
+            for(int j = 0; j < nbufs; j++)
+            {
+                write(sd, databuf[j], bufsize);
+            }
         }
         else if(transferType == 2)
         {
-            writeV(sd, (char**) &databuf, nbufs, bufsize);
+            struct iovec vector[nbufs];
+            for(int j = 0; j < nbufs; j++)
+            {
+                vector[j].iov_base = databuf[j];
+                vector[j].iov_len = bufsize;
+            }
+            writev(sd, vector, nbufs);
         }
         else
         {
-            writeSingle(sd, (char**) databuf, nbufs, bufsize);
+            write(sd, databuf, nbufs*bufsize);
         }
     }
 
     //lap the timer by calling gettimeofday() where lap-start = data-sending time
-    gettimeofday(&thisLap, NULL);
     lapTime = getTimespan(startTime);
+
 
     int count;
 
     //receive from the server an integer acknowledgement that shows how many times the server called read()
     read(sd, &count, sizeof(count));
-
-
 
     //stop the timer by calling gettimeofday() where stop-start = round-trip time
     totalTime = getTimespan(startTime);
@@ -171,7 +175,7 @@ int main(int argc, char* argv[])
 
     //print out the statistics, e.g.:
         //Test 1: data-sending time = xxx usec, round-trip time = yyy usec, #reads = zzz
-    printResults(lapTime, totalTime, ack, transferType);
+    printResults(lapTime, totalTime, count, transferType);
 
 
     //close the socket
@@ -195,39 +199,15 @@ void printResults(long lapTime, long totalTime, int ack, int transferType)
 
 
     cout << header << endl;
-    cout << "\tData-sending time:\t" << lapTime << "usec "<< endl;
-    cout << "Round-trip time:\t" << totalTime << "usec " << endl;
-    cout << "# Reads: " << ack << endl;
+    cout << "\tSend time:\t\t" << lapTime << " usec "<< endl;
+    cout << "\tRound-trip time:\t" << totalTime << " usec " << endl;
+    cout << "\t# Reads:\t\t" << ack << endl;
+
+    cout << "\tSend time\t| RTT\t| # Reads" << endl;
+    cout << "\t" << lapTime << "\t"<< totalTime << "\t" << ack << endl;
 
 }
 
-
-
-void writeMulti(int sd, char * databuf[], int nbufs, int bufsize)
-{
-    for(int j = 0; j < nbufs; j++)
-    {
-        write(sd, databuf[j], bufsize);
-    }
-}
-
-
-void writeV(int sd, char* databuf[], int nbufs, int bufsize)
-{
-    struct iovec vector[nbufs];
-    for(int j = 0; j < nbufs; j++)
-    {
-        vector[j].iov_base = databuf[j];
-        vector[j].iov_len = bufsize;
-    }
-    writev(sd, vector, nbufs);
-}
-
-
-void writeSingle(int sd, char* databuf[], int nbufs, int bufsize)
-{
-    write(sd, databuf, nbufs*bufsize);
-}
 
 
 long getTimespan(timeval startTime)
