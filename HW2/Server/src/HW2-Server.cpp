@@ -29,6 +29,8 @@ int main()
 
     vector<int> buf;
     vector<int>::iterator it;
+    vector<int>::iterator begin;
+    vector<int>::iterator end;
 
 
     Timer stopwatch;
@@ -62,33 +64,61 @@ int main()
 
             cout << "newSeqNum = " << newSeqNum << endl;
 
+            bool movingRight = true;
+            begin = buf.begin();
+            end = buf.end();
 
 
-            for(it = buf.begin(); it < buf.end(); ++it)
+            while(true)
             {
+                if(it == begin - 1)
+                {
+                    buf.insert(buf.begin(), newSeqNum);
+                    it = buf.begin();
+                    break;
+                }
+
+                if(it == end)
+                {
+                    buf.push_back(newSeqNum);
+                    it = buf.begin();
+                    break;
+                }
+
                 if(*it == newSeqNum)
                 {
-                   cout << newSeqNum << " : already exists in vector" << endl;
-                   inserted = true;
-                   break;
-               }
+                    cout << newSeqNum << " : already exists in vector" << endl;
+                    break;
+                }
 
-                if(*it > newSeqNum)
+                if(*it < newSeqNum && movingRight)
                 {
-                    cout << newSeqNum << " : inserting before "  << *it << endl;
-                    buf.insert(it-1, newSeqNum);
+                    ++it;
+                    continue;
+                }
+
+                if(*it > newSeqNum && movingRight)
+                {
+                    --it;
+                    movingRight = false;
+                    continue;
+                }
+
+                if(*it < newSeqNum && !movingRight)
+                {
+                    --it;
+                    continue;
+                }
+
+                if(*it > newSeqNum && !movingRight)
+                {
+                    buf.insert(it+1, newSeqNum);
                     inserted = true;
                     break;
-               }
-            }
-
-
-            if(!inserted)
-            {
-                cout << "inserting at end" << endl;
-                buf.push_back(newSeqNum);
+                }
             }
         }
+
 
         bool reachedEnd = true;
 
