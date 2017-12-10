@@ -83,7 +83,7 @@ int main()
         bool reachedEnd = true;
         for(it = buf.begin() + 1; it < buf.end(); ++it)
         {
-            if(*it != *(it - 1))
+            if(*it != *(it - 1) + 1)
             {
                 cout << "truncating vector at " << *(it -1) << endl;
                 seqNum = *(it-1);
