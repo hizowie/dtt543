@@ -20,7 +20,7 @@ int main() {
     int MAX_SEQ = 10000;
     int MAX_BUF = 1460;
     int window = 100;
-    int timeout = 100000;
+    int timeout = 1000000;
     bool timedout = false;
     Timer stopwatch;
 

@@ -31,7 +31,12 @@ int main()
     vector<int>::iterator it;
     Timer stopwatch;
 
+    bool timedOut = false;
+
+    buf.push_back(seqNum);
+
     UdpSocket sock(50029);
+
 
     while(seqNum < MAX_SEQ)
     {
@@ -81,7 +86,7 @@ int main()
             if(*it != *(it - 1))
             {
                 cout << "truncating vector at " << *(it -1) << endl;
-                ack[0] = *(it-1);
+                seqNum = *(it-1);
                 buf.erase(buf.begin(), it - 1);
                 reachedEnd = false;
                 break;
@@ -90,14 +95,15 @@ int main()
 
         if(reachedEnd)
         {
-
             it = buf.end();
             cout  << "clearing vector; last value was " << *(it -1) << endl;
-            ack[0] = *(it-1);
+            seqNum = *(it-1);
             buf.clear();
+            buf.push_back(seqNum);
         }
 
-        cout << "ackTo()" << endl;
+        ack[0] = seqNum;
+        cout << "ackTo() " << seqNum << endl;
         sock.ackTo((char*) &ack, sizeof(ack));
     }
 
