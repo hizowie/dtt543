@@ -20,7 +20,7 @@ using namespace std;
 
 int main()
 {
-    int seqNum = -1;
+    int seqNum = 0;
     int MAX_BUF = 1460;
     int MAX_SEQ = 10000;
     int timeout = 5000;

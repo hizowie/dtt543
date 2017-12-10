@@ -11,6 +11,8 @@ using namespace std;
 
 #include "UdpSocket.h"
 #include "Timer.h"
+#include "stdio.h"
+#include "stdlib.h"
 
 int main() {
 
@@ -68,7 +70,7 @@ int main() {
             continue;
         }
 
-        sock.recvFrom(ack, sizeof(ack));
+        sock.recvFrom((char*) ack, sizeof(&ack));
 
         cout << "recv'd" << endl;
         cout << "ack[0] = " << ack[0] << endl;
