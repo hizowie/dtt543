@@ -45,7 +45,7 @@ int main()
                 usleep(1);
             }
 
-            sock.recvFrom(ack, sizeof(ack));
+            sock.recvFrom((char*)&ack, sizeof(ack));
             int newSeqNum = ack[0] + ack[1];
 
             for(it = buf.begin(); it < buf.end(); ++it)
@@ -89,7 +89,7 @@ int main()
             buf.clear();
         }
 
-        sock.sendTo(ack, sizeof(ack));
+        sock.sendTo((char*) &ack, sizeof(ack));
     }
 
 }

@@ -16,11 +16,12 @@ int main() {
 
 
     int seqNum = 0;
-    int ackNum = -1;
+    int ackNum = 0;
     int MAX_SEQ = 10000;
     int MAX_BUF = 1460;
     int window = 100;
-    int timeout = 10000;
+    int timeout = 100000;
+    bool timedout = false;
 
     char buf[MAX_BUF];
     char ack[MAX_BUF];
@@ -28,33 +29,45 @@ int main() {
 
 
     UdpSocket sock(50029);
-    sock.setDestAddress("127.0.0.1");
+    sock.setDestAddress("uw1-320-01.uwb.edu");
     Timer stopwatch;
 
-    stopwatch.start();
+    buf[0] = seqNum;
+    sock.sendTo((char*) &buf, sizeof(buf));
+
+
     while(seqNum < MAX_SEQ)
     {
-
-        while(seqNum - ackNum < window)
+        stopwatch.start();
+        while(sock.pollRecvFrom() <= 0)
         {
-            buf[0] = seqNum;
-            sock.sendTo(buf, sizeof(buf));
-            ++seqNum;
+            while(seqNum - ackNum < window)
+            {
+                ++seqNum;
+                buf[0] = seqNum;
+                sock.sendTo((char*) &buf, sizeof(buf));
+            }
+
+            if(stopwatch.lap() >= timeout)
+            {
+                cout << "timed out " << endl;
+                timedout = true;
+                break;
+            }
+
         }
 
-        if(stopwatch.lap() >= timeout)
+        if(timedout)
         {
             seqNum = ackNum;
-            continue;
-        }
-
-        if(sock.pollRecvFrom() <= 0)
-        {
-            usleep(10);
+            timedout = false;
             continue;
         }
 
         sock.recvFrom(ack, sizeof(ack));
+
+        cout << "recv'd" << endl;
+
 
         if(ack[0] > ackNum)
         {
