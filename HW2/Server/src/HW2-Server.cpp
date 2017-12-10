@@ -50,7 +50,7 @@ int main()
                 usleep(1);
             }
 
-            sock.recvFrom((char*)&ack, sizeof(ack));
+            sock.recvFrom((char*)ack, sizeof(&ack));
             int newSeqNum = ack[0] + ack[1];
 
             cout << "newSeqNum = " << newSeqNum << endl;
@@ -104,7 +104,7 @@ int main()
 
         ack[0] = seqNum;
         cout << "ackTo() " << seqNum << endl;
-        sock.ackTo((char*) &ack, sizeof(ack));
+        sock.ackTo((char*) ack, sizeof(&ack));
     }
 
 }

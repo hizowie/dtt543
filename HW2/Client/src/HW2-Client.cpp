@@ -35,8 +35,10 @@ int main() {
 
 
 
-    buf[0] = seqNum;
-    sock.sendTo((char*) &buf, sizeof(buf));
+   buf[0] = seqNum;
+
+
+    sock.sendTo((char*) buf, sizeof(&buf));
 
 
     while(seqNum < MAX_SEQ)
@@ -48,7 +50,7 @@ int main() {
             {
                 ++seqNum;
                 buf[0] = seqNum;
-                sock.sendTo((char*) &buf, sizeof(buf));
+                sock.sendTo((char*)buf, sizeof(&buf));
             }
 
             if(stopwatch.lap() >= timeout)
