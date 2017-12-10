@@ -29,6 +29,8 @@ int main()
 
     vector<int> buf;
     vector<int>::iterator it;
+
+
     Timer stopwatch;
 
     bool timedOut = false;
@@ -43,6 +45,8 @@ int main()
         stopwatch.start();
         bool inserted = false;
 
+        it = buf.begin();
+
         while(stopwatch.lap() < timeout)
         {
             while(sock.pollRecvFrom() <= 0)
@@ -53,25 +57,31 @@ int main()
             sock.recvFrom((char*)ack, sizeof(&ack));
             int newSeqNum = ack[0] + ack[1];
 
+            if(newSeqNum <= seqNum)
+                continue;
+
             cout << "newSeqNum = " << newSeqNum << endl;
+
+
 
             for(it = buf.begin(); it < buf.end(); ++it)
             {
                 if(*it == newSeqNum)
                 {
-                    cout << "already exists in vector " << endl;
-                    inserted = true;
-                    break;
-                }
+                   cout << newSeqNum << " : already exists in vector" << endl;
+                   inserted = true;
+                   break;
+               }
 
-                if(*it > (ack[0] + ack[1]))
+                if(*it > newSeqNum)
                 {
-                    cout << "inserting in front of " << *(it-1) << endl;
+                    cout << newSeqNum << " : inserting before "  << *it << endl;
                     buf.insert(it-1, newSeqNum);
                     inserted = true;
                     break;
-                }
+               }
             }
+
 
             if(!inserted)
             {
@@ -81,8 +91,11 @@ int main()
         }
 
         bool reachedEnd = true;
+
         for(it = buf.begin() + 1; it < buf.end(); ++it)
         {
+            cout << "*it = " << *it << ", *(it-1) = " << *(it -1) << endl;
+
             if(*it != *(it - 1) + 1)
             {
                 cout << "truncating vector at " << *(it -1) << endl;
@@ -97,13 +110,18 @@ int main()
         {
             it = buf.end();
             cout  << "clearing vector; last value was " << *(it -1) << endl;
+            cout << "buf.end() = " << *it << endl;
+
+
             seqNum = *(it-1);
             buf.clear();
             buf.push_back(seqNum);
         }
 
+        cout << "seqNum = " << seqNum << endl;
         ack[0] = seqNum;
-        cout << "ackTo() " << seqNum << endl;
+
+        cout << "ack[0] = " << ack[0] << ack[0] << endl;
         sock.ackTo((char*) ack, sizeof(&ack));
     }
 

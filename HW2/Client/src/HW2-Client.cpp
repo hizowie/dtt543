@@ -71,7 +71,7 @@ int main() {
         sock.recvFrom(ack, sizeof(ack));
 
         cout << "recv'd" << endl;
-
+        cout << "ack[0] = " << ack[0] << endl;
 
         if(ack[0] > ackNum)
         {
