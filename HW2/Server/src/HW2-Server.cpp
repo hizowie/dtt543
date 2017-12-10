@@ -48,16 +48,20 @@ int main()
             sock.recvFrom((char*)&ack, sizeof(ack));
             int newSeqNum = ack[0] + ack[1];
 
+            cout << "newSeqNum = " << newSeqNum << endl;
+
             for(it = buf.begin(); it < buf.end(); ++it)
             {
                 if(*it == newSeqNum)
                 {
+                    cout << "already exists in vector " << endl;
                     inserted = true;
                     break;
                 }
 
                 if(*it > (ack[0] + ack[1]))
                 {
+                    cout << "inserting in front of " << *(it-1) << endl;
                     buf.insert(it-1, newSeqNum);
                     inserted = true;
                     break;
@@ -66,6 +70,7 @@ int main()
 
             if(!inserted)
             {
+                cout << "inserting at end" << endl;
                 buf.push_back(newSeqNum);
             }
         }
@@ -75,6 +80,7 @@ int main()
         {
             if(*it != *(it - 1))
             {
+                cout << "truncating vector at " << *(it -1) << endl;
                 ack[0] = *(it-1);
                 buf.erase(buf.begin(), it - 1);
                 reachedEnd = false;
@@ -84,11 +90,14 @@ int main()
 
         if(reachedEnd)
         {
+
             it = buf.end();
+            cout  << "clearing vector; last value was " << *(it -1) << endl;
             ack[0] = *(it-1);
             buf.clear();
         }
 
+        cout << "ackTo()" << endl;
         sock.ackTo((char*) &ack, sizeof(ack));
     }
 
