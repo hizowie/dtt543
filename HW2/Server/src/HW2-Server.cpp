@@ -89,7 +89,7 @@ int main()
             buf.clear();
         }
 
-        sock.sendTo((char*) &ack, sizeof(ack));
+        sock.ackTo((char*) &ack, sizeof(ack));
     }
 
 }

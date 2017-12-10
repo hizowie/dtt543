@@ -22,6 +22,8 @@ int main() {
     int window = 100;
     int timeout = 100000;
     bool timedout = false;
+    Timer stopwatch;
+
 
     char buf[MAX_BUF];
     char ack[MAX_BUF];
@@ -30,7 +32,8 @@ int main() {
 
     UdpSocket sock(50029);
     sock.setDestAddress("uw1-320-01.uwb.edu");
-    Timer stopwatch;
+
+
 
     buf[0] = seqNum;
     sock.sendTo((char*) &buf, sizeof(buf));
@@ -50,11 +53,10 @@ int main() {
 
             if(stopwatch.lap() >= timeout)
             {
-                cout << "timed out " << endl;
+                cout << "timed out: " << seqNum << endl;
                 timedout = true;
                 break;
             }
-
         }
 
         if(timedout)
